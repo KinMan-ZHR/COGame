@@ -15,14 +15,14 @@ public class WavMusic extends Thread {
     private boolean live=true;
     private boolean pause=true;
     private final BufferedInputStream bufferedInputStream;
-    private AudioInputStream audioInputStream;
-    private SourceDataLine auLine;
+    private final AudioInputStream audioInputStream;
+    private final SourceDataLine auLine;
     //缓冲
     private final byte[] readData = new byte[512];
     //自己维护自己
     private static final ArrayList<WavMusic> wavMusics=new ArrayList<>();
     private final String name;
-    private WavMusic(String wavFile) {//以后只需调用就可以了，wavFile即为为文件名
+    private WavMusic(String wavFile) throws Exception{//以后只需调用就可以了，wavFile即为为文件名
         name=wavFile;
         //用包装流读取音乐文件
         bufferedInputStream = new BufferedInputStream(Objects.requireNonNull(GameWin.class.getClassLoader().getResourceAsStream(wavFile)));
@@ -30,8 +30,8 @@ public class WavMusic extends Thread {
         try {
             audioInputStream = AudioSystem.getAudioInputStream(bufferedInputStream);
         } catch (UnsupportedAudioFileException | IOException e) {
-            e.printStackTrace();
-            return;//这里的return有一股不成功，便成仁的意味
+            System.err.println("Error loading audio file: " + e.getMessage());
+            throw new Exception("Failed to load audio file: " + wavFile);//这里的return有一股不成功，便成仁的意味
         }
         //标起始点，和缓存大小，音乐一般要2的23次方到26次方之间
         //也可以通过该方法获得本地文件的大小audioInputStream.getFrameLength()
@@ -46,8 +46,8 @@ public class WavMusic extends Thread {
             auLine=AudioSystem.getSourceDataLine(audioInputStream.getFormat());
             auLine.open(format);
         } catch (LineUnavailableException e) {
-            e.printStackTrace();
-            return;
+            System.err.println("Error opening audio line: " + e.getMessage());
+            throw new Exception("Failed to open audio line for: " + wavFile);
         }
         //音量控制
         FloatControl control = (FloatControl) auLine.getControl(FloatControl.Type.MASTER_GAIN);
@@ -56,7 +56,7 @@ public class WavMusic extends Thread {
        	 */
         control.setValue(-20);
         //启动音乐线程
-        this.start();
+//        this.start();
         //加入音乐集合之中
         wavMusics.add(this);
     }
@@ -64,7 +64,11 @@ public class WavMusic extends Thread {
      * 创建音乐
      */
     public static void createMusic(String wavFileName){
-        new WavMusic(wavFileName);
+        try {
+            new WavMusic(wavFileName).start();
+        } catch (Exception e) {
+            System.err.println("Music creation failed: " + e.getMessage());
+        }
     }
     /**
      * 打开音乐
@@ -74,12 +78,12 @@ public class WavMusic extends Thread {
     public static WavMusic getOnWavMusic(String wavFileName) {
         WavMusic wavMusic=null;
         for (WavMusic music :wavMusics){
-           if(Objects.equals(music.name, wavFileName)){
-               wavMusic=music;
-           }else {
-               music.pause=true;
-           }
-       }
+            if(Objects.equals(music.name, wavFileName)){
+                wavMusic=music;
+            }else {
+                music.pause=true;
+            }
+        }
         if (wavMusic != null) {
             wavMusic.pause=false;
         }else throw new RuntimeException("你想要播放的文件尚未create");
