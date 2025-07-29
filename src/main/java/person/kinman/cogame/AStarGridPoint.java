@@ -82,7 +82,6 @@ public abstract class AStarGridPoint {
             hasSeen.remove(currentE);
         }
 
-
         /**
          * 使用冒泡排序将开启列表中的节点按F值从小到大排序
          */
@@ -97,6 +96,7 @@ public abstract class AStarGridPoint {
                 }
             }
         }
+
         /**
          * 使用冒泡排序将开启列表中的节点按H值从小到大排序
          */
