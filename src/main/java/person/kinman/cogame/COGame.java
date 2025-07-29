@@ -42,7 +42,7 @@ public class COGame {
      * 创建音乐
      */
     private static void loadGameMusic(){
-        WavMusic.createMusic("Brand X Music - Get Bent.wav");
+       WavMusic.createMusic("Brand X Music - Get Bent.wav");
        WavMusic.createMusic("imagine dragonslil wayne - believer.wav");
        WavMusic.createMusic("Varien-Future Funk.wav");
     }
@@ -50,10 +50,10 @@ public class COGame {
      * 游戏玩家的载入
      */
     private static void loadPlayers() {
-        Player.createPlayer(1,"player1.jpg");
+        Player.createPlayer(1, "player1.jpg");
         Player.getPlayer(1).setLocation(map.getaStarGridPoints()[0][0]);
         Player.getPlayer(1).setName("谨漫KinMan");
-        Player.createPlayer(2,"player2.jpg");
+        Player.createPlayer(2, "player2.jpg");
         Player.getPlayer(2).setLocation(map.getaStarGridPoints()[5][5]);
         Player.getPlayer(2).setName("无名之辈");
         actor = Player.getPlayer(1);
