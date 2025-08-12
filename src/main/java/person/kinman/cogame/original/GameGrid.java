@@ -1,4 +1,4 @@
-package person.kinman.cogame;
+package person.kinman.cogame.original;
 
 import java.awt.*;
 
