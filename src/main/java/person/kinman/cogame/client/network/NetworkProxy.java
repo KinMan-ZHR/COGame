@@ -1,37 +1,36 @@
 package person.kinman.cogame.client.network;
 
+import person.kinman.cogame.client.contract.INetworkProxy;
+import person.kinman.cogame.client.ui.page.event.GlobalEventBus;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
 
 /**
  * 网络代理类 - 单一职责：处理所有与服务器的网络通信
  */
-public class NetworkProxy {
+public class NetworkProxy implements INetworkProxy {
     private Socket clientSocket;
     private BufferedReader in;
     private PrintWriter out;
     private Thread listenerThread;
-    
-    // 回调函数 - 用于通知UI层收到服务器消息
-    private final Consumer<String> onMessageReceived;
-    // 回调函数 - 用于通知UI层连接状态变化
-    private final Consumer<Boolean> onConnected;
-    // 带消息的连接状态变化回调
-    private final Consumer2<Boolean, String> onConnectionStatusChanged;
+    // 单例实例（volatile保证多线程可见性）
+    private static volatile NetworkProxy instance;
 
-    /**
-     * 构造函数
-     * @param onMessageReceived 收到消息时的回调
-     * @param onConnectionStatusChanged 连接状态变化时的回调
-     */
-    public NetworkProxy(Consumer<String> onMessageReceived, 
-                       Consumer2<Boolean, String> onConnectionStatusChanged) {
-        this.onMessageReceived = onMessageReceived;
-        this.onConnectionStatusChanged = onConnectionStatusChanged;
-        this.onConnected = isConnected -> 
-            onConnectionStatusChanged.accept(isConnected, isConnected ? "连接成功" : "连接断开");
+    // 私有构造函数：禁止外部直接实例化
+    private NetworkProxy() {}
+
+    // 如果需要在无参场景下获取实例（需确保已初始化）
+    public static NetworkProxy getInstance() {
+        if (instance == null) {
+            synchronized (NetworkProxy.class) {
+                if (instance == null) {
+                    instance = new NetworkProxy();
+                }
+            }
+        }
+        return instance;
     }
 
     /**
@@ -53,7 +52,7 @@ public class NetworkProxy {
                 out = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream(), StandardCharsets.UTF_8), true);
                 
                 // 通知UI连接成功
-                onConnectionStatusChanged.accept(true, "已连接到服务器: " + ip + ":" + port);
+                onConnectionStatusChanged(true, "已连接到服务器: " + ip + ":" + port);
                 
                 // 启动消息监听线程
                 startMessageListener();
@@ -63,7 +62,7 @@ public class NetworkProxy {
                 
             } catch (IOException e) {
                 // 通知UI连接失败
-                onConnectionStatusChanged.accept(false, "连接失败: " + e.getMessage());
+                onConnectionStatusChanged(false, "连接失败: " + e.getMessage());
                 // 清理资源
                 closeResources();
             }
@@ -79,16 +78,15 @@ public class NetworkProxy {
                 String message;
                 // 循环读取服务器消息，直到连接关闭
                 while ((message = in.readLine()) != null) {
-                    // 通过回调将消息传递给UI层
-                    onMessageReceived.accept(message);
+                    onMessageReceived(message);
                 }
                 
                 // 如果跳出循环，说明连接已关闭
-                onConnected.accept(false);
+                onConnectionStatusChanged(false, "已与服务器断开连接");
                 
             } catch (IOException e) {
                 // 发生异常，连接已断开
-                onConnectionStatusChanged.accept(false, "与服务器断开连接: " + e.getMessage());
+                onConnectionStatusChanged(false, "与服务器断开连接: " + e.getMessage());
             } finally {
                 closeResources();
             }
@@ -106,7 +104,7 @@ public class NetworkProxy {
         if (out != null && clientSocket != null && !clientSocket.isClosed()) {
             new Thread(() -> out.println(message)).start();
         } else {
-            onConnectionStatusChanged.accept(false, "未连接到服务器，无法发送消息");
+            onConnectionStatusChanged(false, "未连接到服务器，无法发送消息");
         }
     }
 
@@ -117,9 +115,9 @@ public class NetworkProxy {
         if (clientSocket != null && !clientSocket.isClosed()) {
             try {
                 clientSocket.close();
-                onConnected.accept(false);
+                onConnectionStatusChanged(false, "已与服务器断开连接");
             } catch (IOException e) {
-                onConnectionStatusChanged.accept(false, "断开连接失败: " + e.getMessage());
+                onConnectionStatusChanged(false, "断开连接失败: " + e.getMessage());
             }
         }
         closeResources();
@@ -154,7 +152,15 @@ public class NetworkProxy {
     public boolean isConnected() {
         return clientSocket != null && !clientSocket.isClosed() && clientSocket.isConnected();
     }
-    
+
+    private void onMessageReceived(String message) {
+        GlobalEventBus.getInstance().post(new ServerMessageEvent(message));
+    }
+
+    private void onConnectionStatusChanged(boolean isConnected, String message) {
+        GlobalEventBus.getInstance().post(new ConnectionStatusEvent(isConnected, message));
+    }
+
     /**
      * 函数式接口，用于接收两个参数的回调
      */

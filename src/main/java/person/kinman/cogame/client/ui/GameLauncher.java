@@ -2,7 +2,7 @@ package person.kinman.cogame.client.ui;
 
 import person.kinman.cogame.client.ui.page.BattlePanel;
 import person.kinman.cogame.client.ui.page.LocalGamePanel;
-import person.kinman.cogame.client.ui.page.OnlineGamePanel;
+import person.kinman.cogame.client.ui.page.network.OnlineGamePanel;
 import person.kinman.cogame.client.ui.page.StartPanel;
 
 import javax.swing.JFrame;
