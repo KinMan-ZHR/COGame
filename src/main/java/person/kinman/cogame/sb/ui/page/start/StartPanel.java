@@ -1,8 +1,7 @@
-package person.kinman.cogame.sb.ui.page;
+package person.kinman.cogame.sb.ui.page.start;
 
 import person.kinman.cogame.sb.contract.PanelId;
-import person.kinman.cogame.sb.event.OnlineGameEvent;
-import person.kinman.cogame.sb.event.LocalGameEvent;
+import person.kinman.cogame.sb.event.SwitchToPanelEvent;
 import person.kinman.cogame.sb.eventBus.GlobalEventBus;
 import person.kinman.cogame.sb.ui.BasePanel;
 
@@ -26,13 +25,11 @@ public class StartPanel extends BasePanel {
     @Override
     protected void initListeners() {
         localBtn.addActionListener(e -> {
-            // 触发开始游戏事件
-            GlobalEventBus.getUiBus().post(new LocalGameEvent());
+            GlobalEventBus.getUiBus().post(new SwitchToPanelEvent(PanelId.LOCAL_GAME_PANEL));
         });
 
         onlineBtn.addActionListener(e -> {
-            // 触发退出游戏事件
-            GlobalEventBus.getUiBus().post(new OnlineGameEvent());
+            GlobalEventBus.getUiBus().post(new SwitchToPanelEvent(PanelId.SERVER_CONNECT_PANEL));
         });
     }
 

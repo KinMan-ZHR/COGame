@@ -30,7 +30,7 @@ public class ConnectionPanelController {
 
     @Subscribe
     public void onServerMessage(ConnectionStatusEvent event) {
-        String message = event.getMessage();
+        String message = event.message();
         boolean isConnected = event.isConnected();
         buttonStatusTextUpdater.accept(message);
         connectionStateUpdater.accept(isConnected); // 通知UI连接状态变化
