@@ -48,24 +48,6 @@ public interface IPanel {
     Component getComponent();
 
     /**
-     * 切换到指定面板（由面板管理器调用，用于页面跳转）
-     * 该方法定义面板间切换的标准行为，避免直接在面板内部硬编码切换逻辑
-     * @param panel 目标面板（需实现IPanel接口）
-     * @throws IllegalArgumentException 若目标面板未初始化（{@link #init()}未调用），则抛出异常
-     */
-    default void switchTo(IPanel panel) {
-        // 默认实现：检查目标面板状态，隐藏当前面板，显示目标面板
-        if (panel == null) {
-            throw new NullPointerException("目标面板不能为空");
-        }
-        if (!panel.isInitialized()) {
-            throw new IllegalArgumentException("目标面板未初始化，请先调用init()方法");
-        }
-        this.hideComponent();
-        panel.showComponent();
-    }
-
-    /**
      * 判断面板是否已初始化
      * 用于在切换或操作面板前验证状态（避免操作未初始化的面板）
      * @return true：已初始化（{@link #init()}已调用）；false：未初始化

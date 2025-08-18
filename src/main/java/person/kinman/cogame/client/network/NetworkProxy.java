@@ -2,42 +2,30 @@ package person.kinman.cogame.client.network;
 
 import person.kinman.cogame.client.contract.INetworkProxy;
 import person.kinman.cogame.client.ui.page.event.GlobalEventBus;
+import person.kinman.cogame.client.event.ConnectionStatusEvent;
+import person.kinman.cogame.client.event.ServerMessageEvent;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 网络代理类 - 单一职责：处理所有与服务器的网络通信
+ * 网络代理类
  */
 public class NetworkProxy implements INetworkProxy {
     private Socket clientSocket;
     private BufferedReader in;
     private PrintWriter out;
     private Thread listenerThread;
-    // 单例实例（volatile保证多线程可见性）
-    private static volatile NetworkProxy instance;
 
-    // 私有构造函数：禁止外部直接实例化
-    private NetworkProxy() {}
-
-    // 如果需要在无参场景下获取实例（需确保已初始化）
-    public static NetworkProxy getInstance() {
-        if (instance == null) {
-            synchronized (NetworkProxy.class) {
-                if (instance == null) {
-                    instance = new NetworkProxy();
-                }
-            }
-        }
-        return instance;
-    }
+    public NetworkProxy() {}
 
     /**
      * 连接到服务器
      * @param ip 服务器IP地址
      * @param port 服务器端口号
      */
+    @Override
     public void connect(String ip, int port) {
         // 先断开可能存在的连接
         disconnect();
@@ -99,6 +87,7 @@ public class NetworkProxy implements INetworkProxy {
      * 发送消息到服务器
      * @param message 要发送的消息
      */
+    @Override
     public void sendMessage(String message) {
         // 检查连接是否有效
         if (out != null && clientSocket != null && !clientSocket.isClosed()) {
@@ -111,6 +100,7 @@ public class NetworkProxy implements INetworkProxy {
     /**
      * 断开与服务器的连接
      */
+    @Override
     public void disconnect() {
         if (clientSocket != null && !clientSocket.isClosed()) {
             try {
@@ -149,6 +139,7 @@ public class NetworkProxy implements INetworkProxy {
     /**
      * 检查是否已连接到服务器
      */
+    @Override
     public boolean isConnected() {
         return clientSocket != null && !clientSocket.isClosed() && clientSocket.isConnected();
     }
@@ -159,13 +150,5 @@ public class NetworkProxy implements INetworkProxy {
 
     private void onConnectionStatusChanged(boolean isConnected, String message) {
         GlobalEventBus.getInstance().post(new ConnectionStatusEvent(isConnected, message));
-    }
-
-    /**
-     * 函数式接口，用于接收两个参数的回调
-     */
-    @FunctionalInterface
-    public interface Consumer2<T, U> {
-        void accept(T t, U u);
     }
 }
