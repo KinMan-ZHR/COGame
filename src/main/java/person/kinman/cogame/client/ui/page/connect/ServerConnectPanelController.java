@@ -24,9 +24,7 @@ public class ServerConnectPanelController extends BaseController {
 
     @Subscribe
     public void handleConnectRequestEvent(ServerConnectRequestEvent event){
-        if (!networkProxy.isConnected()) {
-            connect(event.ip(), event.port());
-        }
+        connect(event.ip(), event.port());
     }
 
     @Subscribe
@@ -40,9 +38,7 @@ public class ServerConnectPanelController extends BaseController {
 
     @Subscribe
     public void handleDisconnectRequestEvent(ServerDisconnectRequestEvent event){
-        if (networkProxy.isConnected()) {
-            disconnect();
-        }
+        disconnect();
     }
 
     /**

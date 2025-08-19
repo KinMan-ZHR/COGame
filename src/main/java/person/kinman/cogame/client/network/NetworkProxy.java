@@ -17,8 +17,8 @@ import java.nio.charset.StandardCharsets;
 public class NetworkProxy implements INetworkProxy {
     private static final Logger log = LoggerFactory.getLogger(NetworkProxy.class);
     private volatile Socket clientSocket;
-    private BufferedReader in;
-    private PrintWriter out;
+    private volatile BufferedReader in;
+    private volatile PrintWriter out;
     private Thread listenerThread;
     // 定义锁对象
     private final Object lock = new Object();
@@ -32,12 +32,10 @@ public class NetworkProxy implements INetworkProxy {
      */
     @Override
     public void connect(String ip, int port) {
-        // 先断开可能存在的连接
-        disconnect();
-        
         // 在新线程中执行连接操作，避免阻塞UI
         new Thread(() -> {
             synchronized (lock){
+                closeResources();
                 try {
                     // 建立Socket连接
                     clientSocket = new Socket(ip, port);
@@ -66,6 +64,10 @@ public class NetworkProxy implements INetworkProxy {
      * 启动消息监听线程，持续接收服务器发送的消息
      */
     private void startMessageListener() {
+        // 停止旧监听线程（如果存在）
+        if (listenerThread != null && listenerThread.isAlive()) {
+            listenerThread.interrupt();
+        }
         listenerThread = new Thread(() -> {
             try {
                 String message;
@@ -73,17 +75,18 @@ public class NetworkProxy implements INetworkProxy {
                 while ((message = in.readLine()) != null) {
                     onMessageReceived(message);
                 }
-                
                 // 如果跳出循环，说明连接已关闭
                 onConnectionStatusChanged("已与服务器断开连接");
-                
             } catch (IOException e) {
-                // 发生异常，连接已断开
-                onConnectionStatusChanged("与服务器断开连接: " + e.getMessage());
+                // 正常关闭时的异常无需告警
+                if (!Thread.currentThread().isInterrupted()) {
+                    log.debug("消息监听异常", e);
+                    onConnectionStatusChanged("与服务器断开连接: " + e.getMessage());
+                }
             } finally {
                 closeResources();
             }
-        });
+        }, "MessageListener");
         
         listenerThread.start();
     }
@@ -95,10 +98,13 @@ public class NetworkProxy implements INetworkProxy {
     @Override
     public void sendMessage(String message) {
         // 检查连接是否有效
-        if (out != null && clientSocket != null && !clientSocket.isClosed()) {
-            new Thread(() -> out.println(message)).start();
-        } else {
-            onConnectionStatusChanged("未连接到服务器，无法发送消息");
+        synchronized (lock) {
+            // 检查连接有效性
+            if (isConnected()) {
+                out.println(message);
+            } else {
+                onConnectionStatusChanged("未连接到服务器，无法发送消息");
+            }
         }
     }
 
@@ -107,58 +113,67 @@ public class NetworkProxy implements INetworkProxy {
      */
     @Override
     public void disconnect() {
-        synchronized (lock) { // 加锁保证关闭操作的原子性
-            // 仅在连接存在时执行关闭
-            if (clientSocket != null && !clientSocket.isClosed()) {
-                try {
-                    // 1. 先关闭输入输出流（避免读写操作干扰）
-                    if (in != null) {
-                        in.close();
+        new Thread(() -> {
+            synchronized (lock) { // 加锁保证关闭操作的原子性
+                if (clientSocket != null && !clientSocket.isClosed()) {
+                    try {
+                        // 2. 关闭Socket（触发四次挥手）
+                        clientSocket.close();
+                        // 3. 关闭成功后通知状态
+                        onConnectionStatusChanged("已与服务器断开连接");
+                    } catch (IOException e) {
+                        // 关闭失败时通知异常，但不立即释放资源（可能需要重试）
+                        onConnectionStatusChanged("断开连接失败: " + e.getMessage());
+                        return; // 关闭失败时不执行后续的资源置空，保留状态以便重试
                     }
-                    if (out != null) {
-                        out.close();
-                    }
-                    // 2. 关闭Socket（触发四次挥手）
-                    clientSocket.close();
-                    // 3. 关闭成功后通知状态
-                    onConnectionStatusChanged("已与服务器断开连接");
-                } catch (IOException e) {
-                    // 关闭失败时通知异常，但不立即释放资源（可能需要重试）
-                    onConnectionStatusChanged("断开连接失败: " + e.getMessage());
-                    return; // 关闭失败时不执行后续的资源置空，保留状态以便重试
                 }
+                // 4. 只有关闭成功或连接已不存在时，才释放资源
+                closeResources();
             }
-            // 4. 只有关闭成功或连接已不存在时，才释放资源
-            closeResources();
-        }
+        }, "DisconnectThread").start();
+
     }
 
     /**
      * 关闭所有网络资源
      */
+    /**
+     * 关闭所有网络资源（加锁确保线程安全）
+     */
     private void closeResources() {
-        try {
-            // 二次确认关闭（防止遗漏）
-            if (in != null) {
-                in.close();
-                in = null;
+        synchronized (lock) {
+            // 中断监听线程（如果存在）
+            if (listenerThread != null && !listenerThread.isInterrupted()) {
+                listenerThread.interrupt();
+                listenerThread = null;
             }
+
+            // 释放流资源
+            try {
+                if (in != null) {
+                    in.close();
+                    in = null;
+                }
+            } catch (IOException e) {
+                log.warn("输入流关闭异常", e);
+            }
+
+            // PrintWriter关闭无IO异常
             if (out != null) {
                 out.close();
                 out = null;
             }
-            if (clientSocket != null) {
-                clientSocket.close(); // 即使之前关闭过，再次关闭也不会报错
-                clientSocket = null;
-            }
-        } catch (IOException e) {
-            log.error("释放资源时发生异常", e); // 仅日志记录，不影响状态
-        }
 
-        // 停止监听线程
-        if (listenerThread != null && listenerThread.isAlive()) {
-            listenerThread.interrupt();
-            listenerThread = null;
+            // 关闭Socket
+            try {
+                if (clientSocket != null && !clientSocket.isClosed()) {
+                    clientSocket.close();
+                }
+            } catch (IOException e) {
+                log.warn("Socket关闭异常", e);
+            } finally {
+                clientSocket = null; // 置空标记连接已释放
+            }
         }
     }
 
