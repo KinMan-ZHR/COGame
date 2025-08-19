@@ -29,6 +29,10 @@ public class UIController extends BaseController {
 
     @Subscribe
     public void handleConnectStatusEvent(ConnectionStatusEvent event) {
-        uiManager.showErrorDialog(event.message());
+        if (event.isConnected()){
+            uiManager.showInfoDialog(event.message());
+        } else {
+            uiManager.showWarningDialog(event.message());
+        }
     }
 }

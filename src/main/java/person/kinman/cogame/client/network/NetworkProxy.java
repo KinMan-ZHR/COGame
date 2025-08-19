@@ -1,9 +1,11 @@
 package person.kinman.cogame.client.network;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import person.kinman.cogame.client.contract.INetworkProxy;
-import person.kinman.cogame.client.ui.page.event.GlobalEventBus;
 import person.kinman.cogame.client.event.ConnectionStatusEvent;
 import person.kinman.cogame.client.event.ServerMessageEvent;
+import person.kinman.cogame.client.eventBus.GlobalEventBus;
 
 import java.io.*;
 import java.net.Socket;
@@ -13,10 +15,13 @@ import java.nio.charset.StandardCharsets;
  * 网络代理类
  */
 public class NetworkProxy implements INetworkProxy {
-    private Socket clientSocket;
+    private static final Logger log = LoggerFactory.getLogger(NetworkProxy.class);
+    private volatile Socket clientSocket;
     private BufferedReader in;
     private PrintWriter out;
     private Thread listenerThread;
+    // 定义锁对象
+    private final Object lock = new Object();
 
     public NetworkProxy() {}
 
@@ -32,27 +37,27 @@ public class NetworkProxy implements INetworkProxy {
         
         // 在新线程中执行连接操作，避免阻塞UI
         new Thread(() -> {
-            try {
-                // 建立Socket连接
-                clientSocket = new Socket(ip, port);
-                // 获取输入输出流
-                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
-                out = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream(), StandardCharsets.UTF_8), true);
-                
-                // 通知UI连接成功
-                onConnectionStatusChanged(true, "已连接到服务器: " + ip + ":" + port);
-                
-                // 启动消息监听线程
-                startMessageListener();
-                
-                // 可以发送一个连接成功的确认消息给服务器
-                sendMessage("客户端已连接");
-                
-            } catch (IOException e) {
-                // 通知UI连接失败
-                onConnectionStatusChanged(false, "连接失败: " + e.getMessage());
-                // 清理资源
-                closeResources();
+            synchronized (lock){
+                try {
+                    // 建立Socket连接
+                    clientSocket = new Socket(ip, port);
+                    // 获取输入输出流
+                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
+                    out = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream(), StandardCharsets.UTF_8), true);
+                    // 启动消息监听线程
+                    startMessageListener();
+
+                    // 可以发送一个连接成功的确认消息给服务器
+                    sendMessage("客户端已连接");
+                    // 通知UI连接成功
+                    onConnectionStatusChanged("已连接到服务器: " + ip + ":" + port);
+
+                } catch (IOException e) {
+                    // 通知UI连接失败
+                    onConnectionStatusChanged("连接失败: " + e.getMessage());
+                    // 清理资源
+                    closeResources();
+                }
             }
         }).start();
     }
@@ -70,11 +75,11 @@ public class NetworkProxy implements INetworkProxy {
                 }
                 
                 // 如果跳出循环，说明连接已关闭
-                onConnectionStatusChanged(false, "已与服务器断开连接");
+                onConnectionStatusChanged("已与服务器断开连接");
                 
             } catch (IOException e) {
                 // 发生异常，连接已断开
-                onConnectionStatusChanged(false, "与服务器断开连接: " + e.getMessage());
+                onConnectionStatusChanged("与服务器断开连接: " + e.getMessage());
             } finally {
                 closeResources();
             }
@@ -93,7 +98,7 @@ public class NetworkProxy implements INetworkProxy {
         if (out != null && clientSocket != null && !clientSocket.isClosed()) {
             new Thread(() -> out.println(message)).start();
         } else {
-            onConnectionStatusChanged(false, "未连接到服务器，无法发送消息");
+            onConnectionStatusChanged("未连接到服务器，无法发送消息");
         }
     }
 
@@ -102,15 +107,30 @@ public class NetworkProxy implements INetworkProxy {
      */
     @Override
     public void disconnect() {
-        if (clientSocket != null && !clientSocket.isClosed()) {
-            try {
-                clientSocket.close();
-                onConnectionStatusChanged(false, "已与服务器断开连接");
-            } catch (IOException e) {
-                onConnectionStatusChanged(false, "断开连接失败: " + e.getMessage());
+        synchronized (lock) { // 加锁保证关闭操作的原子性
+            // 仅在连接存在时执行关闭
+            if (clientSocket != null && !clientSocket.isClosed()) {
+                try {
+                    // 1. 先关闭输入输出流（避免读写操作干扰）
+                    if (in != null) {
+                        in.close();
+                    }
+                    if (out != null) {
+                        out.close();
+                    }
+                    // 2. 关闭Socket（触发四次挥手）
+                    clientSocket.close();
+                    // 3. 关闭成功后通知状态
+                    onConnectionStatusChanged("已与服务器断开连接");
+                } catch (IOException e) {
+                    // 关闭失败时通知异常，但不立即释放资源（可能需要重试）
+                    onConnectionStatusChanged("断开连接失败: " + e.getMessage());
+                    return; // 关闭失败时不执行后续的资源置空，保留状态以便重试
+                }
             }
+            // 4. 只有关闭成功或连接已不存在时，才释放资源
+            closeResources();
         }
-        closeResources();
     }
 
     /**
@@ -118,17 +138,23 @@ public class NetworkProxy implements INetworkProxy {
      */
     private void closeResources() {
         try {
-            if (in != null) in.close();
-            if (out != null) out.close();
-            if (clientSocket != null) clientSocket.close();
+            // 二次确认关闭（防止遗漏）
+            if (in != null) {
+                in.close();
+                in = null;
+            }
+            if (out != null) {
+                out.close();
+                out = null;
+            }
+            if (clientSocket != null) {
+                clientSocket.close(); // 即使之前关闭过，再次关闭也不会报错
+                clientSocket = null;
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("释放资源时发生异常", e); // 仅日志记录，不影响状态
         }
-        
-        in = null;
-        out = null;
-        clientSocket = null;
-        
+
         // 停止监听线程
         if (listenerThread != null && listenerThread.isAlive()) {
             listenerThread.interrupt();
@@ -141,14 +167,18 @@ public class NetworkProxy implements INetworkProxy {
      */
     @Override
     public boolean isConnected() {
-        return clientSocket != null && !clientSocket.isClosed() && clientSocket.isConnected();
+        synchronized (lock) { // 用锁保证三个条件判断的原子性
+            return clientSocket != null
+                    && !clientSocket.isClosed()
+                    && clientSocket.isConnected();
+        }
     }
 
     private void onMessageReceived(String message) {
-        GlobalEventBus.getInstance().post(new ServerMessageEvent(message));
+        GlobalEventBus.getBusinessBus().post(new ServerMessageEvent(message));
     }
 
-    private void onConnectionStatusChanged(boolean isConnected, String message) {
-        GlobalEventBus.getInstance().post(new ConnectionStatusEvent(isConnected, message));
+    private void onConnectionStatusChanged(String message) {
+        GlobalEventBus.getBusinessBus().post(new ConnectionStatusEvent(isConnected(), message));
     }
 }

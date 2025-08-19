@@ -104,8 +104,6 @@ public class ServerConnectPanel extends BasePanel {
      */
     public void updateConnectingState(ConnectionButtonStatus connectionButtonStatus) {
         SwingUtilities.invokeLater(() -> {
-            buttonStatus = connectionButtonStatus;
-
             switch (connectionButtonStatus){
                 case CONNECTING:
                     connectBtn.setText("连接中...");
@@ -115,7 +113,7 @@ public class ServerConnectPanel extends BasePanel {
                     statusLabel.setText("正在连接到 " + ipField.getText() + ":" + portField.getText() + "...");
                     break;
 
-                case CONNECTED, DISCONNECT_FAILED:
+                case CONNECTED:
                     connectBtn.setText("断开连接");
                     connectBtn.setBackground(DISCONNECT_COLOR);
                     connectBtn.setEnabled(true);
@@ -131,14 +129,6 @@ public class ServerConnectPanel extends BasePanel {
                     statusLabel.setText("请输入服务器信息并点击连接");
                     break;
 
-                case CONNECT_FAILED:
-                    connectBtn.setText("连接服务器");
-                    connectBtn.setBackground(CONNECT_COLOR);
-                    connectBtn.setEnabled(true);
-                    statusLabel.setForeground(new Color(255, 99, 71)); // 浅红色
-                    statusLabel.setText("连接失败，请检查服务器信息");
-                    break;
-
                 case DISCONNECTING:
                     connectBtn.setText("正在断开连接...");
                     connectBtn.setBackground(CONNECTING_COLOR);
@@ -147,6 +137,15 @@ public class ServerConnectPanel extends BasePanel {
                     statusLabel.setText("正在断开连接...");
                     break;
             }
+            if (buttonStatus == ConnectionButtonStatus.CONNECTING && connectionButtonStatus == ConnectionButtonStatus.DISCONNECTED){
+                statusLabel.setForeground(new Color(255, 99, 71)); // 浅红色
+                statusLabel.setText("连接失败，请检查服务器信息");
+            }
+            if (buttonStatus == ConnectionButtonStatus.DISCONNECTING && connectionButtonStatus == ConnectionButtonStatus.CONNECTED){
+                    statusLabel.setForeground(new Color(255, 99, 71)); // 浅红色
+                    statusLabel.setText("断开连接失败");
+            }
+            buttonStatus = connectionButtonStatus;
         });
     }
 

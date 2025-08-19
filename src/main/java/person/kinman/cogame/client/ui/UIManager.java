@@ -94,4 +94,14 @@ public class UIManager implements IUIManager {
     public void showErrorDialog(String msg) {
         JOptionPane.showMessageDialog(getCurrentPanel(), msg, "错误", JOptionPane.ERROR_MESSAGE);
     }
+
+    @Override
+    public void showWarningDialog(String msg) {
+        JOptionPane.showMessageDialog(getCurrentPanel(), msg, "警告", JOptionPane.WARNING_MESSAGE);
+    }
+
+    @Override
+    public void showInfoDialog(String msg) {
+         JOptionPane.showMessageDialog(getCurrentPanel(), msg, "提示", JOptionPane.INFORMATION_MESSAGE);
+    }
 }

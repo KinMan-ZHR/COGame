@@ -8,7 +8,5 @@ public enum ConnectionButtonStatus {
     CONNECTING,
     DISCONNECTING,
     CONNECTED,
-    CONNECT_FAILED,
-    DISCONNECTED,
-    DISCONNECT_FAILED
+    DISCONNECTED;
 }

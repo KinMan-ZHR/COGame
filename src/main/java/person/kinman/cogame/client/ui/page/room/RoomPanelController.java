@@ -1,8 +1,9 @@
 package person.kinman.cogame.client.ui.page.room;
 
-import person.kinman.cogame.client.ui.page.event.GlobalEventBus;
 import person.kinman.cogame.client.contract.Communicable;
+import person.kinman.cogame.client.contract.PanelId;
 import person.kinman.cogame.client.event.SwitchToPanelEvent;
+import person.kinman.cogame.client.eventBus.GlobalEventBus;
 import person.kinman.cogame.client.ui.BaseController;
 
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ public class RoomPanelController extends BaseController implements IRoomPanelCon
         // 3. 游戏开始消息
         if (message.contains("游戏开始")) {
             statusUpdater.accept("游戏开始！");
-            GlobalEventBus.getInstance().post(new SwitchToPanelEvent());
+            GlobalEventBus.getUiBus().post(new SwitchToPanelEvent(PanelId.GAME_MAIN_PANEL));
             return;
         }
 

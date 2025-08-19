@@ -31,6 +31,10 @@ public interface IUIManager {
 
     void showErrorDialog(String msg);
 
+    void showWarningDialog(String msg);
+
+    void showInfoDialog(String msg);
+
     // 面板工厂接口：定义创建面板的方法
     @FunctionalInterface
     interface PanelFactory {

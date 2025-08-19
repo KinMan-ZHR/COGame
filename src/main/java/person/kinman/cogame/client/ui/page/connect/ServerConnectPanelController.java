@@ -1,6 +1,7 @@
 package person.kinman.cogame.client.ui.page.connect;
 
 import com.google.common.eventbus.Subscribe;
+import person.kinman.cogame.client.event.ConnectionStatusEvent;
 import person.kinman.cogame.client.event.SystemErrorDialogEvent;
 import person.kinman.cogame.client.eventBus.GlobalEventBus;
 import person.kinman.cogame.client.contract.Connectable;
@@ -26,10 +27,14 @@ public class ServerConnectPanelController extends BaseController {
         if (!networkProxy.isConnected()) {
             connect(event.ip(), event.port());
         }
-        if (networkProxy.isConnected()){
+    }
+
+    @Subscribe
+    public void handleConnectResponseEvent(ConnectionStatusEvent event){
+        if (event.isConnected()){
             GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.CONNECTED));
         } else {
-            GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.CONNECT_FAILED));
+            GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.DISCONNECTED));
         }
     }
 
@@ -37,12 +42,6 @@ public class ServerConnectPanelController extends BaseController {
     public void handleDisconnectRequestEvent(ServerDisconnectRequestEvent event){
         if (networkProxy.isConnected()) {
             disconnect();
-        }
-
-        if (networkProxy.isConnected()){
-            GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.DISCONNECT_FAILED));
-        } else {
-            GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.DISCONNECTED));
         }
     }
 
