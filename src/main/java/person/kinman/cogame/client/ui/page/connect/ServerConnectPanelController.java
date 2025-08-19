@@ -31,6 +31,7 @@ public class ServerConnectPanelController extends BaseController {
      * 连接到服务器（核心职责：验证输入+发起连接）
      */
     public void connect(String ip, String portStr) {
+        new Thread(() -> {
         // 1. 验证IP和端口
         if (ip.isEmpty() || portStr.isEmpty()) {
             GlobalEventBus.getUiBus().post(new SystemErrorDialogEvent("请输入服务器IP和端口"));
@@ -48,14 +49,19 @@ public class ServerConnectPanelController extends BaseController {
         } catch (NumberFormatException ex) {
             GlobalEventBus.getUiBus().post(new SystemErrorDialogEvent(("端口号必须是数字")));
         }
+        }, "ConnectThread").start();
     }
 
     /**
      * 断开与服务器的连接
      */
     public void disconnect() {
-        if (networkProxy.isConnected()) {
-            networkProxy.disconnect();
-        }
+        // 2. 在后台线程执行实际断开操作
+        new Thread(() -> {
+            if (networkProxy.isConnected()) {
+                networkProxy.disconnect();
+            }
+            // 断开结果会通过NetworkProxy发布的事件更新UI
+        }, "DisconnectThread").start();
     }
 }
