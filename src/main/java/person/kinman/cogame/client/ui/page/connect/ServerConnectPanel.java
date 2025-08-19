@@ -4,14 +4,13 @@ import com.google.common.eventbus.Subscribe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import person.kinman.cogame.client.contract.PanelId;
+import person.kinman.cogame.client.event.ConnectionStatusEvent;
 import person.kinman.cogame.client.event.SwitchToPanelEvent;
 import person.kinman.cogame.client.eventBus.GlobalEventBus;
 import person.kinman.cogame.client.ui.BasePanel;
 import person.kinman.cogame.client.ui.button.JButtonFactory;
 import person.kinman.cogame.client.ui.page.connect.enums.ConnectionButtonStatus;
 import person.kinman.cogame.client.ui.page.connect.events.ServerConnectRequestEvent;
-import person.kinman.cogame.client.ui.page.connect.events.ServerConnectResponseEvent;
-import person.kinman.cogame.client.ui.page.connect.events.ServerDisconnectRequestEvent;
 
 import javax.swing.*;
 import java.awt.*;
@@ -49,20 +48,20 @@ public class ServerConnectPanel extends BasePanel {
             if (buttonStatus == ConnectionButtonStatus.DISCONNECTED) {
                 // 当前未连接，发送连接请求
                 updateConnectingState(ConnectionButtonStatus.CONNECTING);
-                GlobalEventBus.getUiBus().post(new ServerConnectRequestEvent(ipField.getText(), portField.getText()));
+                GlobalEventBus.getUiBus().post(new ServerConnectRequestEvent(true, ipField.getText(), portField.getText()));
             } else if (buttonStatus == ConnectionButtonStatus.CONNECTED) {
                 // 当前已连接，发送断开连接请求
                 // 这里需要添加断开连接的逻辑
                 updateConnectingState(ConnectionButtonStatus.DISCONNECTING);
-                GlobalEventBus.getUiBus().post(new ServerDisconnectRequestEvent());
+                GlobalEventBus.getUiBus().post(new ServerConnectRequestEvent(false, ipField.getText(), portField.getText()));
             }
         });
 
     }
 
     @Subscribe
-    public void handleConnectResponseEvent(ServerConnectResponseEvent event) {
-        updateConnectingState(event.connectionButtonStatus());
+    public void handleConnectStatusEvent(ConnectionStatusEvent event) {
+        updateConnectingState(event.isConnected() ? ConnectionButtonStatus.CONNECTED : ConnectionButtonStatus.DISCONNECTED);
     }
 
     /**
@@ -146,6 +145,9 @@ public class ServerConnectPanel extends BasePanel {
                     statusLabel.setText("断开连接失败");
             }
             buttonStatus = connectionButtonStatus;
+            if (buttonStatus == ConnectionButtonStatus.CONNECTED){
+                GlobalEventBus.getUiBus().post(new SwitchToPanelEvent(PanelId.ROOM_LIST_PANEL));
+            }
         });
     }
 

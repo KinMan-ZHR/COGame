@@ -1,15 +1,11 @@
 package person.kinman.cogame.client.ui.page.connect;
 
 import com.google.common.eventbus.Subscribe;
-import person.kinman.cogame.client.event.ConnectionStatusEvent;
 import person.kinman.cogame.client.event.SystemErrorDialogEvent;
 import person.kinman.cogame.client.eventBus.GlobalEventBus;
 import person.kinman.cogame.client.contract.Connectable;
 import person.kinman.cogame.client.ui.BaseController;
-import person.kinman.cogame.client.ui.page.connect.enums.ConnectionButtonStatus;
 import person.kinman.cogame.client.ui.page.connect.events.ServerConnectRequestEvent;
-import person.kinman.cogame.client.ui.page.connect.events.ServerConnectResponseEvent;
-import person.kinman.cogame.client.ui.page.connect.events.ServerDisconnectRequestEvent;
 
 /**
  * @author KinMan谨漫
@@ -24,21 +20,11 @@ public class ServerConnectPanelController extends BaseController {
 
     @Subscribe
     public void handleConnectRequestEvent(ServerConnectRequestEvent event){
-        connect(event.ip(), event.port());
-    }
-
-    @Subscribe
-    public void handleConnectResponseEvent(ConnectionStatusEvent event){
-        if (event.isConnected()){
-            GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.CONNECTED));
+        if (event.connect()){
+            connect(event.ip(), event.port());
         } else {
-            GlobalEventBus.getUiBus().post(new ServerConnectResponseEvent(ConnectionButtonStatus.DISCONNECTED));
+            disconnect();
         }
-    }
-
-    @Subscribe
-    public void handleDisconnectRequestEvent(ServerDisconnectRequestEvent event){
-        disconnect();
     }
 
     /**

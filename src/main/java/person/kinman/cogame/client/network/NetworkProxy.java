@@ -194,6 +194,6 @@ public class NetworkProxy implements INetworkProxy {
     }
 
     private void onConnectionStatusChanged(String message) {
-        GlobalEventBus.getBusinessBus().post(new ConnectionStatusEvent(isConnected(), message));
+        GlobalEventBus.getUiBus().post(new ConnectionStatusEvent(isConnected(), message));
     }
 }
