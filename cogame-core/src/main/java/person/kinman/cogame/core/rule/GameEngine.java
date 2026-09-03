@@ -46,10 +46,11 @@ public class GameEngine {
                     return false;
                 }
 
-                // 机制 2: 每回合最多移动3步 (当前格与该回合起始格距离 <= 3)
+                // 机制 2: 动态能量行动力限制 (当前格与该回合起始格距离 <= 当前可用能量)
+                int maxAllowed = player.getEnergy();
                 int dist = GameEvaluator.getDistanceAvoidingOpponent(
                         board, state.getTurnStartR(), state.getTurnStartC(), nr, nc, opponent.getR(), opponent.getC());
-                if (dist < 0 || dist > GameState.MAX_TURN_STEPS) {
+                if (dist < 0 || dist > maxAllowed) {
                     return false;
                 }
 
@@ -77,11 +78,12 @@ public class GameEngine {
                     return true; // 仅转向，不可进入对手格子
                 }
 
-                // 机制 2: 每回合最多移动3步
+                // 机制 2: 动态能量行动力限制
+                int maxAllowed = player.getEnergy();
                 int dist = GameEvaluator.getDistanceAvoidingOpponent(
                         board, state.getTurnStartR(), state.getTurnStartC(), nr, nc, opponent.getR(), opponent.getC());
-                if (dist < 0 || dist > GameState.MAX_TURN_STEPS) {
-                    return true; // 仅转向，不可超出3步
+                if (dist < 0 || dist > maxAllowed) {
+                    return true; // 仅转向，不可超出可用能量步数
                 }
 
                 player.setR(nr);
@@ -93,6 +95,10 @@ public class GameEngine {
                 Direction dir = player.getDirection();
                 boolean locked = board.lockEdge(player.getR(), player.getC(), dir, player.getId());
                 if (locked) {
+                    // 真实结算能量消耗 (等于落点距该回合起始点的位移步数)
+                    int stepsUsed = state.getCurrentTurnSteps();
+                    player.setEnergy(Math.max(0, player.getEnergy() - stepsUsed));
+
                     // 成功封锁后，检查是否满足终局（双方不再连通）
                     GameEvaluator.evaluateGameOver(state);
                     if (!state.isOver()) {

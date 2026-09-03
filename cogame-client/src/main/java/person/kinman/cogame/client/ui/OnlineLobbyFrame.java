@@ -242,9 +242,9 @@ public class OnlineLobbyFrame extends JFrame {
 
         JLabel l2 = createDarkLabel("棋盘规格 (Board Size):");
         JComboBox<String> sizeBox = new JComboBox<>(new String[]{
-                "6 × 6 (经典原版 - 36格)", "7 × 7 (战术进阶 - 49格)", "8 × 8 (战略纵深 - 64格)",
-                "9 × 9 (九宫迷阵 - 81格)", "10 × 10 (双位矩阵 - 100格)", "11 × 11 (广袤对决 - 121格)",
-                "12 × 12 (宏大博弈 - 144格)", "13 × 13 (终极拓扑 - 169格)"
+                "🐣 经典小盘 (6 × 6 - 36格 · 纯净对决)",
+                "⚔️ 战术中盘 (9 × 9 - 81格 · 要塞废墟)",
+                "👑 战略大盘 (12 × 12 - 144格 · 迷宫战场)"
         });
         DarkThemeHelper.styleDarkComboBox(sizeBox);
 
@@ -282,7 +282,11 @@ public class OnlineLobbyFrame extends JFrame {
                 showDarkAlert("提示", "房间号不能为空！");
                 return;
             }
-            int size = sizeBox.getSelectedIndex() + 6;
+            int size = switch (sizeBox.getSelectedIndex()) {
+                case 1 -> 9;
+                case 2 -> 12;
+                default -> 6;
+            };
             String pwd = new String(passwordField.getPassword()).trim();
             dialog.dispose();
             // 房主建房：isHost = true

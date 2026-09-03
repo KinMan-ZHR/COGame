@@ -1,5 +1,7 @@
 package person.kinman.cogame.core.model;
 
+import person.kinman.cogame.core.rule.GameEvaluator;
+
 /**
  * 完整对战游戏状态（可序列化为网络 JSON 快照）
  */
@@ -23,8 +25,6 @@ public class GameState {
         this(6, 6);
     }
 
-    public static final int MAX_TURN_STEPS = 3;
-
     private int turnStartR = 0;
     private int turnStartC = 0;
     private int currentTurnSteps = 0;
@@ -39,10 +39,30 @@ public class GameState {
         reset();
     }
 
+    /**
+     * 能量上限：棋盘边长 - 1
+     */
+    public int getMaxEnergy() {
+        return cols - 1;
+    }
+
+    /**
+     * 每回合恢复能量：边长一半向下取整
+     */
+    public int getEnergyRegen() {
+        return cols / 2;
+    }
+
     public void reset() {
         this.board = new Board(rows, cols);
         this.p1 = new PlayerState(1, "我", 0, 0, Direction.DOWN);
         this.p2 = new PlayerState(2, "对手", rows - 1, cols - 1, Direction.UP);
+
+        // 初始能量等于单回合恢复量（保证首回合攻守对称）
+        int initEnergy = getEnergyRegen();
+        this.p1.setEnergy(initEnergy);
+        this.p2.setEnergy(initEnergy);
+
         this.currentTurn = 1;
         this.turnStartR = 0;
         this.turnStartC = 0;
@@ -54,6 +74,12 @@ public class GameState {
         this.p2Territory = 0;
         this.p1UnblockedEdges = 0;
         this.p2UnblockedEdges = 0;
+
+        // 中大盘进阶模式：初始化预置中立隔断墙 (6x6为0; 9x9为0.12; 12x12为0.16)
+        double ratio = (rows >= 12) ? 0.16 : (rows >= 9 ? 0.12 : 0.0);
+        if (ratio > 0.0) {
+            GameEvaluator.setupNeutralBarriers(this.board, ratio, System.currentTimeMillis());
+        }
     }
 
     public PlayerState getPlayer(int id) {
@@ -71,6 +97,8 @@ public class GameState {
     public void switchTurn() {
         this.currentTurn = (this.currentTurn == 1) ? 2 : 1;
         PlayerState curr = getCurrentPlayer();
+        // 获得恢复能量，但不超过上限
+        curr.setEnergy(Math.min(getMaxEnergy(), curr.getEnergy() + getEnergyRegen()));
         this.turnStartR = curr.getR();
         this.turnStartC = curr.getC();
         this.currentTurnSteps = 0;
@@ -224,6 +252,6 @@ public class GameState {
     }
 
     public int getRemainingSteps() {
-        return Math.max(0, MAX_TURN_STEPS - currentTurnSteps);
+        return Math.max(0, getCurrentPlayer().getEnergy() - currentTurnSteps);
     }
 }

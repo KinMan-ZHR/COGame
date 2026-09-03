@@ -130,13 +130,14 @@ public class GameCanvas extends JPanel {
                     state.getP2().getR(), state.getP2().getC());
         }
 
-        // 计算当前回合玩家在 3 步限制内的可达格子 (避开对手身位)
+        // 计算当前回合玩家在当前能量步数限制内的可达格子 (避开对手身位)
         Set<Long> reachableWithin3 = null;
         if (!state.isOver()) {
+            PlayerState currP = state.getCurrentPlayer();
             PlayerState oppP = state.getOpponentPlayer();
             reachableWithin3 = GameEvaluator.getReachableWithinSteps(
                     board, state.getTurnStartR(), state.getTurnStartC(),
-                    oppP.getR(), oppP.getC(), GameState.MAX_TURN_STEPS);
+                    oppP.getR(), oppP.getC(), currP.getEnergy());
         }
 
         // 5. 绘制所有格子单元
@@ -272,6 +273,10 @@ public class GameCanvas extends JPanel {
                     // P2 (后手/AI) 锁边：暖金琥珀/炽焰霓虹壁障
                     glowColor = new Color(245, 158, 11, 110);
                     coreColor = new Color(251, 191, 36);
+                } else if (locker == 3) {
+                    // 中立预置阻隔墙：钛合金冷灰/玄武岩废墟
+                    glowColor = new Color(100, 116, 139, 90);
+                    coreColor = new Color(148, 163, 184);
                 } else {
                     // 默认警告红
                     glowColor = new Color(239, 68, 68, 100);
@@ -395,34 +400,45 @@ public class GameCanvas extends JPanel {
                 state.isOver() ? state.getP2UnblockedEdges() : -1);
         curY += 115;
 
-        // 本回合行动力卡片 (3步限距)
+        // 动态能量池卡片
         g2.setColor(new Color(30, 41, 59));
-        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 54, 10, 10));
+        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 58, 10, 10));
         g2.setColor(new Color(56, 189, 248));
         g2.setStroke(new BasicStroke(1.2f));
-        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 54, 10, 10));
+        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 58, 10, 10));
+
+        PlayerState currP = state.getCurrentPlayer();
+        int maxEnergy = state.getMaxEnergy();
+        int regen = state.getEnergyRegen();
+        int curEnergy = currP.getEnergy();
+        int currentSteps = state.getCurrentTurnSteps();
 
         g2.setColor(new Color(241, 245, 249));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        g2.drawString("回合行动力 (限距3步):", x + pad + 14, curY + 22);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        String energyTitle = String.format("能量池: %d/%d (每回合+%d)", curEnergy, maxEnergy, regen);
+        g2.drawString(energyTitle, x + pad + 12, curY + 20);
 
-        int currentSteps = state.getCurrentTurnSteps();
-        for (int i = 0; i < 3; i++) {
-            int dotX = x + pad + 175 + i * 20;
-            int dotY = curY + 11;
+        int dotCount = maxEnergy;
+        int dotSpacing = Math.min(18, Math.max(10, (innerWidth - 180) / dotCount));
+        for (int i = 0; i < dotCount; i++) {
+            int dotX = x + pad + 170 + i * dotSpacing;
+            int dotY = curY + 10;
             if (i < currentSteps) {
-                g2.setColor(new Color(56, 189, 248)); // 亮青色已走步数
-                g2.fillOval(dotX, dotY, 13, 13);
+                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗移动步数
+                g2.fillOval(dotX, dotY, 12, 12);
+            } else if (i < curEnergy) {
+                g2.setColor(new Color(56, 189, 248)); // 亮青色：当前可用剩余能量
+                g2.fillOval(dotX, dotY, 12, 12);
             } else {
-                g2.setColor(new Color(71, 85, 105)); // 灰色剩余可用步数
-                g2.drawOval(dotX, dotY, 13, 13);
+                g2.setColor(new Color(71, 85, 105)); // 灰色圆环：未蓄满容量
+                g2.drawOval(dotX, dotY, 12, 12);
             }
         }
 
         g2.setColor(new Color(148, 163, 184));
         g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.drawString("可走 " + state.getRemainingSteps() + " 步 | L键/空格锁边即交换给对手", x + pad + 14, curY + 43);
-        curY += 66;
+        g2.drawString("本回合已走 " + currentSteps + " 步，还可走 " + state.getRemainingSteps() + " 步 | L键锁边交权", x + pad + 12, curY + 44);
+        curY += 70;
 
         // 操作指南小卡片
         g2.setColor(new Color(30, 41, 59));
@@ -437,9 +453,10 @@ public class GameCanvas extends JPanel {
 
         // 边框图例展示
         int legendY = curY + 40;
-        drawLegendBadge(g2, x + pad + 14, legendY, new Color(16, 185, 129), "畅通通路");
-        drawLegendBadge(g2, x + pad + 115, legendY, new Color(34, 211, 238), "P1封锁");
-        drawLegendBadge(g2, x + pad + 205, legendY, new Color(251, 191, 36), "P2/AI封锁");
+        drawLegendBadge(g2, x + pad + 12, legendY, new Color(16, 185, 129), "通路");
+        drawLegendBadge(g2, x + pad + 82, legendY, new Color(34, 211, 238), "P1锁边");
+        drawLegendBadge(g2, x + pad + 158, legendY, new Color(251, 191, 36), "P2锁边");
+        drawLegendBadge(g2, x + pad + 234, legendY, new Color(148, 163, 184), "中立墙");
 
         int lineY = curY + 65;
         drawKeyGuideRow(g2, x + pad + 14, lineY, "WASD / 方向键", "移动并设定朝向"); lineY += 21;

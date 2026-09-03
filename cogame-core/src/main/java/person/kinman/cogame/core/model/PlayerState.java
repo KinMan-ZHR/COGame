@@ -9,6 +9,7 @@ public class PlayerState {
     private int r;
     private int c;
     private Direction direction;
+    private int energy;
 
     public PlayerState() {}
 
@@ -60,7 +61,17 @@ public class PlayerState {
         this.direction = direction;
     }
 
+    public int getEnergy() {
+        return energy;
+    }
+
+    public void setEnergy(int energy) {
+        this.energy = energy;
+    }
+
     public PlayerState copy() {
-        return new PlayerState(this.id, this.name, this.r, this.c, this.direction);
+        PlayerState copy = new PlayerState(this.id, this.name, this.r, this.c, this.direction);
+        copy.energy = this.energy;
+        return copy;
     }
 }

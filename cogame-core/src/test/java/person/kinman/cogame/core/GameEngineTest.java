@@ -2,7 +2,9 @@ package person.kinman.cogame.core;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 import person.kinman.cogame.core.action.GameAction;
+import person.kinman.cogame.core.model.Board;
 import person.kinman.cogame.core.model.Direction;
 import person.kinman.cogame.core.model.GameState;
 import person.kinman.cogame.core.rule.GameEngine;
@@ -83,10 +85,15 @@ public class GameEngineTest {
         Assertions.assertTrue(GameEvaluator.hasPath(state.getBoard(), 0, 0, 12, 12));
 
         // Test moving and locking on 13x13
-        boolean moved = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.RIGHT));
+        List<Direction> openDirs = state.getBoard().getOpenDirections(0, 0);
+        Assertions.assertFalse(openDirs.isEmpty());
+        Direction moveDir = openDirs.get(0);
+        boolean moved = GameEngine.executeAction(state, 1, GameAction.changeDirMove(moveDir));
         Assertions.assertTrue(moved);
-        Assertions.assertEquals(0, state.getP1().getR());
-        Assertions.assertEquals(1, state.getP1().getC());
+
+        List<Direction> nextOpen = state.getBoard().getOpenDirections(state.getP1().getR(), state.getP1().getC());
+        Assertions.assertFalse(nextOpen.isEmpty());
+        state.getP1().setDirection(nextOpen.get(0));
 
         boolean locked = GameEngine.executeAction(state, 1, GameAction.lock());
         Assertions.assertTrue(locked);
@@ -153,5 +160,87 @@ public class GameEngineTest {
         Assertions.assertEquals(0, state.getCurrentTurnSteps());
         Assertions.assertEquals(state.getP2().getR(), state.getTurnStartR());
         Assertions.assertEquals(state.getP2().getC(), state.getTurnStartC());
+    }
+
+    @Test
+    public void testEnergyAccumulationAndBurst() {
+        GameState state = new GameState(6);
+        Assertions.assertEquals(3, state.getP1().getEnergy());
+        Assertions.assertEquals(5, state.getMaxEnergy());
+
+        // P1 takes 0 steps, locks edge facing DOWN directly
+        boolean p1Locked = GameEngine.executeAction(state, 1, GameAction.lock());
+        Assertions.assertTrue(p1Locked);
+        // P1 used 0 steps, so retained 3 energy
+        Assertions.assertEquals(3, state.getP1().getEnergy());
+
+        // P2's turn: initial 3 + 3 (capped at 5) = 5 energy
+        Assertions.assertEquals(5, state.getP2().getEnergy());
+        // P2 takes 1 step down and locks
+        GameEngine.executeAction(state, 2, GameAction.changeDirMove(Direction.UP));
+        GameEngine.executeAction(state, 2, GameAction.lock());
+        // P2 used 1 step, retained 4 energy
+        Assertions.assertEquals(4, state.getP2().getEnergy());
+
+        // P1's turn: 3 retained + 3 regen = 6, capped at 5!
+        Assertions.assertEquals(5, state.getP1().getEnergy());
+        // P1 now has 5 energy and can sprint up to 5 steps!
+        Assertions.assertEquals(5, state.getRemainingSteps());
+    }
+
+    @Test
+    public void testMediumBoard9x9WithPreSetBarriers() {
+        GameState state = new GameState(9);
+        Assertions.assertEquals(9, state.getRows());
+        Assertions.assertEquals(9, state.getCols());
+        Assertions.assertEquals(8, state.getMaxEnergy()); // 9 - 1 = 8
+        Assertions.assertEquals(4, state.getEnergyRegen()); // 9 / 2 = 4
+        Assertions.assertEquals(4, state.getP1().getEnergy());
+        Assertions.assertEquals(4, state.getP2().getEnergy());
+
+        // 连通性必须完好
+        Assertions.assertTrue(GameEvaluator.hasPath(state.getBoard(), 0, 0, 8, 8));
+
+        // 检查是否存在中立预置墙 (locker == 3)
+        boolean hasNeutralBarrier = false;
+        Board board = state.getBoard();
+        for (int r = 0; r < 9; r++) {
+            for (int c = 0; c < 9; c++) {
+                if (board.getEdgeLocker(r, c, Direction.RIGHT) == 3 ||
+                    board.getEdgeLocker(r, c, Direction.DOWN) == 3) {
+                    hasNeutralBarrier = true;
+                    break;
+                }
+            }
+        }
+        Assertions.assertTrue(hasNeutralBarrier, "9x9 战术中盘应当成功生成中立要塞废墟墙");
+    }
+
+    @Test
+    public void testLargeBoard12x12WithPreSetBarriers() {
+        GameState state = new GameState(12);
+        Assertions.assertEquals(12, state.getRows());
+        Assertions.assertEquals(12, state.getCols());
+        Assertions.assertEquals(11, state.getMaxEnergy()); // 12 - 1 = 11
+        Assertions.assertEquals(6, state.getEnergyRegen()); // 12 / 2 = 6
+        Assertions.assertEquals(6, state.getP1().getEnergy());
+        Assertions.assertEquals(6, state.getP2().getEnergy());
+
+        // 连通性必须完好
+        Assertions.assertTrue(GameEvaluator.hasPath(state.getBoard(), 0, 0, 11, 11));
+
+        // 检查是否存在中立预置墙 (locker == 3)
+        boolean hasNeutralBarrier = false;
+        Board board = state.getBoard();
+        for (int r = 0; r < 12; r++) {
+            for (int c = 0; c < 12; c++) {
+                if (board.getEdgeLocker(r, c, Direction.RIGHT) == 3 ||
+                    board.getEdgeLocker(r, c, Direction.DOWN) == 3) {
+                    hasNeutralBarrier = true;
+                    break;
+                }
+            }
+        }
+        Assertions.assertTrue(hasNeutralBarrier, "12x12 战略大盘应当成功生成中立迷宫隔断墙");
     }
 }

@@ -62,14 +62,9 @@ public class MainMenuFrame extends JFrame {
         sizeLabel.setForeground(new Color(226, 232, 240));
 
         String[] sizeOptions = {
-                "6 × 6 (经典原版 - 36格)",
-                "7 × 7 (战术进阶 - 49格)",
-                "8 × 8 (战略纵深 - 64格)",
-                "9 × 9 (九宫迷阵 - 81格)",
-                "10 × 10 (双位矩阵 - 100格)",
-                "11 × 11 (广袤对决 - 121格)",
-                "12 × 12 (宏大博弈 - 144格)",
-                "13 × 13 (终极拓扑迷宫 - 169格)"
+                "🐣 经典小盘 (6 × 6 - 36格 · 纯净对决)",
+                "⚔️ 战术中盘 (9 × 9 - 81格 · 要塞废墟)",
+                "👑 战略大盘 (12 × 12 - 144格 · 迷宫战场)"
         };
         boardSizeComboBox = new JComboBox<>(sizeOptions);
         styleDarkComboBox(boardSizeComboBox);
@@ -137,7 +132,11 @@ public class MainMenuFrame extends JFrame {
     }
 
     private int getSelectedBoardSize() {
-        return boardSizeComboBox.getSelectedIndex() + 6;
+        return switch (boardSizeComboBox.getSelectedIndex()) {
+            case 1 -> 9;
+            case 2 -> 12;
+            default -> 6;
+        };
     }
 
     private void showLoginAndLobbyFlow() {

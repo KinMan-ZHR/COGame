@@ -151,6 +151,44 @@ public class Board {
     }
 
     /**
+     * 解锁指定边（回退封锁操作）
+     */
+    public boolean unlockEdge(int r, int c, Direction dir) {
+        if (!isValidCoord(r, c)) return false;
+        switch (dir) {
+            case UP -> {
+                if (r > 0 && !vEdge[r - 1][c]) {
+                    vEdge[r - 1][c] = true;
+                    vEdgeOwner[r - 1][c] = 0;
+                    return true;
+                }
+            }
+            case DOWN -> {
+                if (r < rows - 1 && !vEdge[r][c]) {
+                    vEdge[r][c] = true;
+                    vEdgeOwner[r][c] = 0;
+                    return true;
+                }
+            }
+            case LEFT -> {
+                if (c > 0 && !hEdge[r][c - 1]) {
+                    hEdge[r][c - 1] = true;
+                    hEdgeOwner[r][c - 1] = 0;
+                    return true;
+                }
+            }
+            case RIGHT -> {
+                if (c < cols - 1 && !hEdge[r][c]) {
+                    hEdge[r][c] = true;
+                    hEdgeOwner[r][c] = 0;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * 获取 (r, c) 当前所有畅通的方向
      */
     public List<Direction> getOpenDirections(int r, int c) {

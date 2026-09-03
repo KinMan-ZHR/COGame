@@ -30,9 +30,9 @@ public class HeuristicAi implements AiStrategy {
         PlayerState opp = state.getPlayer(aiPlayerId == 1 ? 2 : 1);
         Board board = state.getBoard();
 
-        int maxSteps = Math.min(3, Math.max(1, searchDepth));
+        int maxSteps = Math.max(1, me.getEnergy());
 
-        // 1. BFS 寻找从当前位置出发、在 3 步限制内能到达的所有格子及具体路径 (避开对手身位)
+        // 1. BFS 寻找从当前位置出发、在当前可用能量步数内能到达的所有格子及具体路径 (避开对手身位)
         Map<Long, List<Direction>> reachablePaths = getReachablePaths(board, me.getR(), me.getC(), opp.getR(), opp.getC(), maxSteps);
 
         double bestScore = -Double.MAX_VALUE;

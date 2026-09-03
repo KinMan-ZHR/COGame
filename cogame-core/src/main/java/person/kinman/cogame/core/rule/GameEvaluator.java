@@ -304,4 +304,65 @@ public class GameEvaluator {
         }
         return reachable;
     }
+
+    /**
+     * 为中大盘生成连通性保证的中立预置隔断墙
+     * @param board 目标棋盘
+     * @param barrierRatio 预置比例 (e.g. 0.12 or 0.16)
+     * @param seed 随机种子
+     */
+    public static void setupNeutralBarriers(Board board, double barrierRatio, long seed) {
+        if (barrierRatio <= 0.0) return;
+
+        int rows = board.getRows();
+        int cols = board.getCols();
+        int totalEdges = rows * (cols - 1) + (rows - 1) * cols;
+        int targetBarriers = (int) Math.round(totalEdges * barrierRatio);
+
+        List<int[]> candidates = new ArrayList<>();
+        // 水平边
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols - 1; c++) {
+                candidates.add(new int[]{r, c, 1}); // 1 for RIGHT
+            }
+        }
+        // 垂直边
+        for (int r = 0; r < rows - 1; r++) {
+            for (int c = 0; c < cols; c++) {
+                candidates.add(new int[]{r, c, 2}); // 2 for DOWN
+            }
+        }
+
+        Collections.shuffle(candidates, new Random(seed));
+
+        int lockedCount = 0;
+        for (int[] cand : candidates) {
+            if (lockedCount >= targetBarriers) break;
+
+            int r = cand[0];
+            int c = cand[1];
+            Direction dir = (cand[2] == 1) ? Direction.RIGHT : Direction.DOWN;
+            int nr = r + dir.getDr();
+            int nc = c + dir.getDc();
+
+            // 绝不封锁 P1(0,0) 或 P2(rows-1, cols-1) 直接相连的边
+            if ((r == 0 && c == 0) || (nr == 0 && nc == 0)) continue;
+            if ((r == rows - 1 && c == cols - 1) || (nr == rows - 1 && nc == cols - 1)) continue;
+
+            // 保持每个格子的出度 >= 2，绝不产生单格死胡同
+            if (board.getOpenDirections(r, c).size() <= 2) continue;
+            if (board.getOpenDirections(nr, nc).size() <= 2) continue;
+
+            // 尝试封锁为中立墙 (locker = 3)
+            board.lockEdge(r, c, dir, 3);
+
+            // 必须保证全盘连通（从 0,0 到 rows-1, cols-1 依然有通路）
+            if (hasPath(board, 0, 0, rows - 1, cols - 1)) {
+                lockedCount++;
+            } else {
+                // 破坏了全局连通性，回退解锁
+                board.unlockEdge(r, c, dir);
+            }
+        }
+    }
 }
