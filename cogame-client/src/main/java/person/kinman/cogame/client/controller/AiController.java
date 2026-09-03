@@ -1,6 +1,8 @@
 package person.kinman.cogame.client.controller;
 
 import person.kinman.cogame.ai.AiDecision;
+import person.kinman.cogame.ai.AiPlaystyle;
+import person.kinman.cogame.ai.AiStrategy;
 import person.kinman.cogame.ai.HeuristicAi;
 import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.GameState;
@@ -15,7 +17,8 @@ import java.util.function.Consumer;
  */
 public class AiController implements GameController {
     private final GameState state;
-    private final HeuristicAi ai = new HeuristicAi(3);
+    private final AiStrategy aiStrategy;
+    private final AiPlaystyle playstyle;
     private final ExecutorService aiExecutor = Executors.newSingleThreadExecutor();
 
     private Consumer<GameState> onStateChanged;
@@ -23,13 +26,23 @@ public class AiController implements GameController {
     private volatile boolean aiThinking = false;
 
     public AiController() {
-        this(6);
+        this(6, person.kinman.cogame.ai.AiPlaystyle.ANTIGRAVITY);
     }
 
     public AiController(int boardSize) {
+        this(boardSize, person.kinman.cogame.ai.AiPlaystyle.ANTIGRAVITY);
+    }
+
+    public AiController(int boardSize, person.kinman.cogame.ai.AiPlaystyle playstyle) {
+        this.playstyle = (playstyle != null) ? playstyle : person.kinman.cogame.ai.AiPlaystyle.ANTIGRAVITY;
+        this.aiStrategy = this.playstyle.createStrategy();
         this.state = new GameState(boardSize);
         this.state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
-        this.state.getP2().setName("端脑 AI (P2)");
+        this.state.getP2().setName(this.playstyle.getPlayerName());
+    }
+
+    public person.kinman.cogame.ai.AiPlaystyle getPlaystyle() {
+        return playstyle;
     }
 
     @Override
@@ -64,7 +77,7 @@ public class AiController implements GameController {
         aiExecutor.submit(() -> {
             try {
                 Thread.sleep(300); // 适度停顿模拟思考
-                AiDecision decision = ai.computeTurn(state, 2);
+                AiDecision decision = aiStrategy.computeTurn(state, 2);
 
                 for (GameAction act : decision.getActions()) {
                     Thread.sleep(200); // 每步动作动画延迟
@@ -93,7 +106,7 @@ public class AiController implements GameController {
     public void resetGame() {
         state.reset();
         state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
-        state.getP2().setName("端脑 AI (P2)");
+        state.getP2().setName(this.playstyle.getPlayerName());
         aiThinking = false;
         notifyState();
     }

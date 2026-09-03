@@ -90,8 +90,8 @@ public class MainMenuFrame extends JFrame {
         });
 
         ModernMenuButton btnAi = new ModernMenuButton(
-                "② 人机挑战模式 (vs 端脑AI)",
-                "启发式算法 · 动态最短路径阻断与领地争夺",
+                "② 人机流派对决 (vs 智械AI)",
+                "多流派棋风 · 策略控盘(Antigravity) · 极限压迫(Codex) · 均衡守卫",
                 new Color(5, 150, 105),
                 new Color(16, 185, 129),
                 new Color(4, 120, 87),
@@ -99,7 +99,9 @@ public class MainMenuFrame extends JFrame {
         );
         btnAi.addActionListener(e -> {
             int size = getSelectedBoardSize();
-            new GameFrame(new AiController(size)).display();
+            new AiPlaystyleDialog(this, selectedStyle -> {
+                new GameFrame(new AiController(size, selectedStyle)).display();
+            }).setVisible(true);
         });
 
         ModernMenuButton btnOnline = new ModernMenuButton(
