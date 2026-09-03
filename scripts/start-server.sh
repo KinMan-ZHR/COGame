@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-JAR="$DIR/cogame-server/target/cogame-server-2.0.0.jar"
+JAR="$(ls $DIR/cogame-server/target/cogame-server-*.jar 2>/dev/null | grep -v 'original-' | head -n 1 || true)"
 PID_FILE="$DIR/logs/server.pid"
 LOG_FILE="$DIR/logs/server.log"
 JAVA_BIN="${JAVA_HOME:-/home/kinman/.local/opt/temurin-17}/bin/java"

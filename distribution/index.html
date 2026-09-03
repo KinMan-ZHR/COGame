@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COGame - 《端脑》隔断棋盘博弈客户端分发中心</title>
+    <title>COGame - 《端脑》隔断棋盘博弈客户端分发中心 (v2.3.0)</title>
     <style>
         :root {
-            --bg-color: #0f141c;
-            --card-bg: #1a2230;
-            --primary: #3498db;
-            --primary-hover: #2980b9;
-            --accent: #2ecc71;
-            --danger: #e74c3c;
-            --text: #ecf0f1;
-            --text-muted: #95a5a6;
-            --border: #2c3e50;
+            --bg-color: #0b1120;
+            --card-bg: #151f32;
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --accent: #10b981;
+            --neon-blue: #38bdf8;
+            --purple: #7c3aed;
+            --amber: #f59e0b;
+            --danger: #ef4444;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
         }
 
         * {
@@ -32,41 +35,41 @@
         }
 
         .container {
-            max-width: 880px;
+            max-width: 920px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 35px;
         }
 
-        .badge {
+        .badge-version {
             display: inline-block;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            background: linear-gradient(135deg, #0284c7, #7c3aed);
             color: white;
-            padding: 4px 12px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 13px;
-            font-weight: bold;
-            letter-spacing: 1px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             margin-bottom: 15px;
-            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.4);
         }
 
         h1 {
-            font-size: 36px;
+            font-size: 38px;
             font-weight: 800;
             margin-bottom: 12px;
-            background: linear-gradient(135deg, #fff, #bdc3c7);
+            background: linear-gradient(135deg, #ffffff, #94a3b8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .subtitle {
-            font-size: 17px;
+            font-size: 16px;
             color: var(--text-muted);
-            max-width: 600px;
+            max-width: 680px;
             margin: 0 auto;
         }
 
@@ -74,37 +77,37 @@
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 28px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
 
         .download-box {
             text-align: center;
             padding: 40px 20px;
-            background: linear-gradient(180deg, rgba(52, 152, 219, 0.08) 0%, rgba(26, 34, 48, 0.6) 100%);
-            border: 1px solid rgba(52, 152, 219, 0.3);
+            background: linear-gradient(180deg, rgba(2, 132, 199, 0.12) 0%, rgba(21, 31, 50, 0.8) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
         }
 
         .btn-download {
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: linear-gradient(135deg, #0284c7, #2563eb);
             color: white;
             font-size: 18px;
-            font-weight: bold;
-            padding: 16px 36px;
+            font-weight: 700;
+            padding: 16px 40px;
             border-radius: 12px;
             text-decoration: none;
             transition: all 0.2s ease;
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+            box-shadow: 0 6px 22px rgba(2, 132, 199, 0.45);
         }
 
         .btn-download:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.6);
-            background: linear-gradient(135deg, #2980b9, #1f618d);
+            box-shadow: 0 10px 28px rgba(2, 132, 199, 0.65);
+            background: linear-gradient(135deg, #0369a1, #1d4ed8);
         }
 
         .btn-download svg {
@@ -146,39 +149,65 @@
             gap: 10px;
         }
 
-        .modes-grid {
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
         }
 
-        .mode-item {
-            background: rgba(255,255,255,0.03);
+        .feature-item {
+            background: rgba(255,255,255,0.025);
             border: 1px solid rgba(255,255,255,0.06);
             border-radius: 12px;
-            padding: 20px;
+            padding: 18px;
         }
 
-        .mode-item h3 {
-            font-size: 16px;
+        .feature-item h3 {
+            font-size: 15px;
             margin-bottom: 8px;
-            color: #3498db;
+            color: var(--neon-blue);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .mode-item p {
+        .feature-item p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .changelog-item {
+            border-left: 3px solid var(--neon-blue);
+            padding-left: 16px;
+            margin-bottom: 18px;
+        }
+
+        .changelog-item h3 {
+            font-size: 15px;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+        }
+
+        .changelog-item ul {
+            padding-left: 18px;
             font-size: 13px;
             color: var(--text-muted);
         }
 
+        .changelog-item li {
+            margin-bottom: 4px;
+        }
+
         pre {
-            background: #111620;
-            border: 1px solid #232d3d;
+            background: #0f172a;
+            border: 1px solid #1e293b;
             border-radius: 8px;
             padding: 14px 18px;
             font-family: Consolas, Monaco, monospace;
-            font-size: 14px;
-            color: #2ecc71;
+            font-size: 13px;
+            color: #38bdf8;
             overflow-x: auto;
             margin: 12px 0;
         }
@@ -204,86 +233,131 @@
 <body>
     <div class="container">
         <header>
-            <span class="badge">《端脑》经典博弈演进 · v2.1 视觉与规格升级</span>
+            <span class="badge-version">🔥 最新发行版：v2.3.0 终极博弈深度与联机大厅</span>
             <h1>COGame - 《端脑》隔断棋盘博弈</h1>
-            <p class="subtitle">双方在矩阵中移动并封锁通路，直到连通性阻断决出胜负。现已全面支持 <strong>6×6 ~ 13×13</strong> 自由规格选择与自适应全屏！</p>
+            <p class="subtitle">原汁原味还原《端脑》漫画终极心理与空间拓扑战！现已全面升级<strong>实体身位卡位</strong>、<strong>3 步行动力</strong>、<strong>专属等待室</strong>与<strong>高对比深色大厅</strong>！</p>
         </header>
 
+        <!-- 下载卡片 -->
         <div class="card download-box">
             <a href="COGame-Client.jar" class="btn-download" download>
                 <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
                 一键下载客户端 (COGame-Client.jar)
             </a>
-            <div class="file-info">版本: v2.1.0 (全量独立可执行包) | 大小: 约 63 MB | 环境要求: Java 17 或以上</div>
+            <div class="file-info">
+                <strong>版本：v2.3.0 正式版</strong> | 格式：全量 Fat-JAR (开箱即用) | 大小：约 63 MB | 环境：Java 17+
+            </div>
             <div class="server-status">
                 <span class="status-dot"></span>
-                <span>联机对战服务器正在运行中：<code>ws://&lt;本服务器IP&gt;:8088</code></span>
+                <span>对战服务器运行中：<code>ws://&lt;当前服务器IP&gt;:8088</code> (端口已放行，安全防御网已启动)</span>
             </div>
         </div>
 
+        <!-- 核心重磅升级 -->
         <div class="card">
-            <h2>✨ v2.1 全新升级亮点</h2>
-            <div class="modes-grid">
-                <div class="mode-item">
-                    <h3>🎨 高对比度清晰视觉</h3>
-                    <p>重构高对比度暗黑科技棋盘，翠绿明亮通路 vs 炽红粗壮发光封锁壁障，数字编号与玩家状态一目了然。</p>
+            <h2>✨ v2.3.0 核心机制与玩法革新</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <h3>♟️ 实体卡位与身位阻挡</h3>
+                    <p>彻底告别同格幽灵重叠！双方角色拥有刚性碰撞体积，不能踩入对手所在格。狭窄路段可直接肉身封死要道，逼迫对手绕行！</p>
                 </div>
-                <div class="mode-item">
-                    <h3>📐 6×6 ~ 13×13 自由规格</h3>
-                    <p>不仅保留经典 36 格对战，更支持最大 13×13 (169格) 的庞大战略迷阵，AI 与联机均已完美适配。</p>
+                <div class="feature-item">
+                    <h3>⚡ 3步限距与棋盘气泡</h3>
+                    <p>每回合限距 3 步！棋盘实时高亮展示 3 步可达范围气泡。支持<strong>反向撤销重走</strong>，避免因误操作误触无法移动！</p>
                 </div>
-                <div class="mode-item">
-                    <h3>🖥️ 自由缩放与 F11 全屏</h3>
-                    <p>窗口大小自适应计算棋盘与文字缩放，支持随时按 F11 切换沉浸式全屏博弈！</p>
+                <div class="feature-item">
+                    <h3>🚪 专属房间等待室</h3>
+                    <p>房主建房后自动开启等待室：提供<strong>大号房号、一键复制到剪贴板</strong>、双方席位就绪卡片，对手加入后毫秒级自动过渡开战！</p>
                 </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>🎮 支持的三大对战模式</h2>
-            <div class="modes-grid">
-                <div class="mode-item">
-                    <h3>① 单机双人对战</h3>
-                    <p>保留原汁原味的原版操作体验，两人同台设备、同一键盘交替行动与封锁，即开即玩。</p>
+                <div class="feature-item">
+                    <h3>🎨 DarkTheme 自绘深色</h3>
+                    <p>全面重构深色自绘组件（DarkButton 与专属弹窗），彻底切断 Windows 原生 LookAndFeel 浅色反噬，绝不再出现白底亮片！</p>
                 </div>
-                <div class="mode-item">
-                    <h3>② 人机挑战模式</h3>
-                    <p>内置启发式割裂连通 AI 算法，智能计算封锁哪条边能最大程度切断你的路径并扩大自身领地。</p>
+                <div class="feature-item">
+                    <h3>🛡️ 8088 企业级安全防御网</h3>
+                    <p>单 IP 8 连接上限防 Slowloris、16KB 报文大小硬截断、25 req/s 滑动窗口限流，恶意探测自动进入 5 分钟动态黑名单！</p>
                 </div>
-                <div class="mode-item">
-                    <h3>③ 网络联机对战 (C/S)</h3>
-                    <p>客户端通过 WebSocket 连接本服务器，输入相同房间号即可秒配对战，支持双方动作毫秒级同步！</p>
+                <div class="feature-item">
+                    <h3>📐 6×6 ~ 13×13 拓扑迷阵</h3>
+                    <p>支持从 36 格经典对决到 169 格广袤大棋盘，支持自适应窗口缩放与 F11 一键真全屏！</p>
                 </div>
             </div>
         </div>
 
+        <!-- 对战模式 -->
         <div class="card">
-            <h2>🚀 客户端运行方式</h2>
-            <p style="color: var(--text-muted); font-size: 14px;">下载 <code>COGame-Client.jar</code> 到本地电脑后，双击即可运行（或在终端执行）：</p>
+            <h2>🎮 三大完整游玩模式</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <h3 style="color: #10b981;">① 单机双人对战</h3>
+                    <p>本地同屏对抗，支持自定昵称与棋盘大小，适合线下二人面对面切磋与战术演练。</p>
+                </div>
+                <div class="feature-item">
+                    <h3 style="color: #38bdf8;">② 人机挑战模式</h3>
+                    <p>内置启发式割裂算法 AI，AI 会主动避开人类身位并搜寻 3 步以内最优锁边路径！</p>
+                </div>
+                <div class="feature-item">
+                    <h3 style="color: #a855f7;">③ 网络联机大厅 (C/S)</h3>
+                    <p>支持前置登录认证唯一昵称、大厅房间列表浏览、密码私密房、输入房号秒进与等待室。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 运行与操作 -->
+        <div class="card">
+            <h2>🚀 客户端运行与控制指南</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">在 Windows / macOS / Linux 桌面环境中直接双击 <code>COGame-Client.jar</code>，或在终端执行：</p>
             <pre>java -jar COGame-Client.jar</pre>
-            <p style="color: var(--text-muted); font-size: 13px; margin-top: 10px;">也可通过命令行参数快速指定模式与棋盘规格：</p>
+            <h3 style="font-size: 14px; margin: 14px 0 8px; color: #fff;">⌨️ 快捷按键一览：</h3>
             <ul>
-                <li>单机模式：<code>java -jar COGame-Client.jar --local [6-13]</code></li>
-                <li>人机模式：<code>java -jar COGame-Client.jar --ai [6-13]</code></li>
-                <li>联机对战：<code>java -jar COGame-Client.jar --online ws://&lt;服务器IP&gt;:8088 1001 玩家名 [6-13]</code></li>
+                <li><strong>WASD / 方向键</strong>：在 3 步范围内移动并改变朝向（若误走可直接反向退回）。</li>
+                <li><strong>空格键 (SPACE)</strong>：沿角色当前朝向前进一步。</li>
+                <li><strong>R 键</strong>：顺时针旋转 90 度。</li>
+                <li><strong>L 键</strong>：<strong>封锁当前朝向的边</strong>，封锁成功后<strong>立即将行动权交换给对手</strong>！</li>
+                <li><strong>P 键</strong>：显示/隐藏双方最短连通路径（高亮线）。</li>
+                <li><strong>F11 键</strong>：切换沉浸式全屏。</li>
+                <li><strong>+ 键 / = 键</strong>：重置棋局。</li>
             </ul>
         </div>
 
+        <!-- 版本演进史 -->
         <div class="card">
-            <h2>⌨️ 游戏操作指南</h2>
-            <ul>
-                <li><strong>WASD / 方向键</strong>：移动当前行动角色并改变朝向。</li>
-                <li><strong>空格键 (SPACE)</strong>：沿角色当前朝向前进一步。</li>
-                <li><strong>R 键</strong>：角色顺时针旋转 90 度。</li>
-                <li><strong>L 键</strong>：<strong>封锁当前朝向的边（关键操作）</strong>，若封锁成功则切换至对手回合！</li>
-                <li><strong>P 键</strong>：开启/隐藏双方当前的最短连通路径（高亮显示）。</li>
-                <li><strong>F11 键</strong>：<strong>开启 / 退出自适应全屏模式</strong>。</li>
-                <li><strong>+ 键 / = 键</strong>：重置棋局重新开始。</li>
-            </ul>
+            <h2>📜 版本演进历史</h2>
+            <div class="changelog-item">
+                <h3>v2.3.0 (当前最新版)</h3>
+                <ul>
+                    <li>实装格子实体卡位机制（禁止同格重叠，允许身位堵门）；</li>
+                    <li>实装每回合 3 步限距机制与棋盘 3 步可达气泡高亮，支持退回再试探；</li>
+                    <li>实装专属房间等待室（RoomWaitingDialog），支持大号房号、一键复制、对手加入自动开局；</li>
+                    <li>引入 DarkThemeHelper，全面自绘深色高对比按钮与弹窗，根除 Windows 白底亮片不可读问题；</li>
+                    <li>全面激活 8088 端口应用级安全防御网与动态黑名单。</li>
+                </ul>
+            </div>
+            <div class="changelog-item">
+                <h3>v2.2.0</h3>
+                <ul>
+                    <li>实装玩家前置登录认证与全服唯一昵称机制；</li>
+                    <li>实装房间大厅列表浏览、密码房间保护与房号精确加入；</li>
+                    <li>本地持久化玩家配置（ProfileManager）。</li>
+                </ul>
+            </div>
+            <div class="changelog-item">
+                <h3>v2.1.0</h3>
+                <ul>
+                    <li>重构现代化暗黑科技风高对比度界面；</li>
+                    <li>支持 6×6 至 13×13 自由棋盘规格选择与 F11 自由全屏。</li>
+                </ul>
+            </div>
+            <div class="changelog-item">
+                <h3>v2.0.0</h3>
+                <ul>
+                    <li>将原本单机游戏成功重构为现代化 C/S 客户端与服务端分离架构。</li>
+                </ul>
+            </div>
         </div>
 
         <footer>
-            <p>Developed with ❤️ by KinMan | COGame v2.0 Architecture Reborn</p>
+            <p>Developed with ❤️ by KinMan | COGame v2.3.0 Architecture Reborn</p>
         </footer>
     </div>
 </body>

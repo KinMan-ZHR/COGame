@@ -9,7 +9,7 @@ if tmux has-session -t cogame-server 2>/dev/null; then
     tmux kill-session -t cogame-server
 fi
 
-pkill -f "cogame-server-2.0.0.jar" 2>/dev/null || true
+pkill -f "cogame-server.*jar" 2>/dev/null || true
 rm -f "$PID_FILE"
 
 # 等待端口 8088 彻底释放
@@ -17,7 +17,7 @@ for i in {1..10}; do
     if ! ss -lnt | grep -q ":8088 "; then
         break
     fi
-    pkill -9 -f "cogame-server-2.0.0.jar" 2>/dev/null || true
+    pkill -9 -f "cogame-server.*jar" 2>/dev/null || true
     sleep 0.3
 done
 
