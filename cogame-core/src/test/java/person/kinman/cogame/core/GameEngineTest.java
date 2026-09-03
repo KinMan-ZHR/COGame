@@ -92,4 +92,66 @@ public class GameEngineTest {
         Assertions.assertTrue(locked);
         Assertions.assertEquals(2, state.getCurrentTurn());
     }
+
+    @Test
+    public void testSolidCollisionBlocking() {
+        GameState state = new GameState();
+        // Place P2 at (1, 0) right in front of P1 (0, 0)
+        state.getP2().setR(1);
+        state.getP2().setC(0);
+
+        // P1 attempts to move into P2's cell (1, 0)
+        boolean moved = GameEngine.executeAction(state, 1, GameAction.move());
+        Assertions.assertFalse(moved, "P1 无法踩入对手 P2 所在的格子（身位阻挡）");
+        Assertions.assertEquals(0, state.getP1().getR());
+        Assertions.assertEquals(0, state.getP1().getC());
+    }
+
+    @Test
+    public void testMax3StepsPerTurn() {
+        GameState state = new GameState();
+        Assertions.assertEquals(0, state.getCurrentTurnSteps());
+
+        // Step 1: (0,0) -> (1,0)
+        boolean s1 = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.DOWN));
+        Assertions.assertTrue(s1);
+        Assertions.assertEquals(1, state.getCurrentTurnSteps());
+
+        // Step 2: (1,0) -> (2,0)
+        boolean s2 = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.DOWN));
+        Assertions.assertTrue(s2);
+        Assertions.assertEquals(2, state.getCurrentTurnSteps());
+
+        // Step 3: (2,0) -> (3,0)
+        boolean s3 = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.DOWN));
+        Assertions.assertTrue(s3);
+        Assertions.assertEquals(3, state.getCurrentTurnSteps());
+
+        // Step 4: (3,0) -> (4,0) -> MUST FAIL (超出3步限制)
+        boolean s4 = GameEngine.executeAction(state, 1, GameAction.move());
+        Assertions.assertFalse(s4, "单回合移动不可超过 3 步");
+        Assertions.assertEquals(3, state.getP1().getR());
+
+        // Step back: (3,0) -> (2,0) -> MUST SUCCEED (回退，距离缩减为2)
+        boolean back = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.UP));
+        Assertions.assertTrue(back);
+        Assertions.assertEquals(2, state.getP1().getR());
+        Assertions.assertEquals(2, state.getCurrentTurnSteps());
+
+        // Step branch: (2,0) -> (2,1) -> MUST SUCCEED (距离为3)
+        boolean branch = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.RIGHT));
+        Assertions.assertTrue(branch);
+        Assertions.assertEquals(2, state.getP1().getR());
+        Assertions.assertEquals(1, state.getP1().getC());
+        Assertions.assertEquals(3, state.getCurrentTurnSteps());
+
+        // Lock edge: ends turn and switches to P2
+        boolean locked = GameEngine.executeAction(state, 1, GameAction.lock());
+        Assertions.assertTrue(locked);
+        Assertions.assertEquals(2, state.getCurrentTurn());
+        // In P2's turn, steps count resets to 0 and turn start is P2's position
+        Assertions.assertEquals(0, state.getCurrentTurnSteps());
+        Assertions.assertEquals(state.getP2().getR(), state.getTurnStartR());
+        Assertions.assertEquals(state.getP2().getC(), state.getTurnStartC());
+    }
 }

@@ -29,17 +29,34 @@ public class GameEngine {
         }
 
         PlayerState player = state.getCurrentPlayer();
+        PlayerState opponent = state.getOpponentPlayer();
         Board board = state.getBoard();
 
         switch (action.getType()) {
             case MOVE -> {
                 Direction dir = player.getDirection();
-                if (board.isConnected(player.getR(), player.getC(), dir)) {
-                    player.setR(player.getR() + dir.getDr());
-                    player.setC(player.getC() + dir.getDc());
-                    return true;
+                if (!board.isConnected(player.getR(), player.getC(), dir)) {
+                    return false;
                 }
-                return false;
+                int nr = player.getR() + dir.getDr();
+                int nc = player.getC() + dir.getDc();
+
+                // 机制 1: 身位阻挡 (禁止与对手站立在同一格)
+                if (nr == opponent.getR() && nc == opponent.getC()) {
+                    return false;
+                }
+
+                // 机制 2: 每回合最多移动3步 (当前格与该回合起始格距离 <= 3)
+                int dist = GameEvaluator.getDistanceAvoidingOpponent(
+                        board, state.getTurnStartR(), state.getTurnStartC(), nr, nc, opponent.getR(), opponent.getC());
+                if (dist < 0 || dist > GameState.MAX_TURN_STEPS) {
+                    return false;
+                }
+
+                player.setR(nr);
+                player.setC(nc);
+                state.setCurrentTurnSteps(dist);
+                return true;
             }
             case ROTATE -> {
                 player.setDirection(player.getDirection().clockwise());
@@ -49,12 +66,28 @@ public class GameEngine {
                 Direction dir = action.getDirection();
                 if (dir == null) return false;
                 player.setDirection(dir);
-                if (board.isConnected(player.getR(), player.getC(), dir)) {
-                    player.setR(player.getR() + dir.getDr());
-                    player.setC(player.getC() + dir.getDc());
+                if (!board.isConnected(player.getR(), player.getC(), dir)) {
                     return true;
                 }
-                return true; // 即使被阻挡，方向已经调整
+                int nr = player.getR() + dir.getDr();
+                int nc = player.getC() + dir.getDc();
+
+                // 机制 1: 身位阻挡
+                if (nr == opponent.getR() && nc == opponent.getC()) {
+                    return true; // 仅转向，不可进入对手格子
+                }
+
+                // 机制 2: 每回合最多移动3步
+                int dist = GameEvaluator.getDistanceAvoidingOpponent(
+                        board, state.getTurnStartR(), state.getTurnStartC(), nr, nc, opponent.getR(), opponent.getC());
+                if (dist < 0 || dist > GameState.MAX_TURN_STEPS) {
+                    return true; // 仅转向，不可超出3步
+                }
+
+                player.setR(nr);
+                player.setC(nc);
+                state.setCurrentTurnSteps(dist);
+                return true;
             }
             case LOCK -> {
                 Direction dir = player.getDirection();

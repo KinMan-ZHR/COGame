@@ -17,6 +17,7 @@ import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 游戏核心画板：支持 6x6~13x13 动态规格、自适应窗口/全屏缩放与高对比度现代暗色视觉
@@ -129,6 +130,15 @@ public class GameCanvas extends JPanel {
                     state.getP2().getR(), state.getP2().getC());
         }
 
+        // 计算当前回合玩家在 3 步限制内的可达格子 (避开对手身位)
+        Set<Long> reachableWithin3 = null;
+        if (!state.isOver()) {
+            PlayerState oppP = state.getOpponentPlayer();
+            reachableWithin3 = GameEvaluator.getReachableWithinSteps(
+                    board, state.getTurnStartR(), state.getTurnStartC(),
+                    oppP.getR(), oppP.getC(), GameState.MAX_TURN_STEPS);
+        }
+
         // 5. 绘制所有格子单元
         int fontSize = Math.max(10, (int) (cellSize * 0.28));
         Font cellFont = new Font("Consolas", Font.BOLD, fontSize);
@@ -148,6 +158,8 @@ public class GameCanvas extends JPanel {
                     }
                 }
 
+                boolean isReachable = (reachableWithin3 != null && reachableWithin3.contains(GameEvaluator.encode(r, c)));
+
                 // 格子填充色（高对比度）
                 if (inPath) {
                     g2.setColor(new Color(14, 116, 144)); // 连通路径高亮青蓝
@@ -155,6 +167,8 @@ public class GameCanvas extends JPanel {
                     g2.setColor(new Color(8, 51, 68)); // P1所处位置光晕
                 } else if (r == state.getP2().getR() && c == state.getP2().getC()) {
                     g2.setColor(new Color(69, 26, 3)); // P2所处位置光晕
+                } else if (isReachable) {
+                    g2.setColor(new Color(24, 45, 75)); // 当前回合3步可达范围柔和高亮
                 } else {
                     g2.setColor(new Color(30, 41, 59)); // 默认深岩蓝格子
                 }
@@ -381,9 +395,38 @@ public class GameCanvas extends JPanel {
                 state.isOver() ? state.getP2UnblockedEdges() : -1);
         curY += 115;
 
+        // 本回合行动力卡片 (3步限距)
+        g2.setColor(new Color(30, 41, 59));
+        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 54, 10, 10));
+        g2.setColor(new Color(56, 189, 248));
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 54, 10, 10));
+
+        g2.setColor(new Color(241, 245, 249));
+        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+        g2.drawString("回合行动力 (限距3步):", x + pad + 14, curY + 22);
+
+        int currentSteps = state.getCurrentTurnSteps();
+        for (int i = 0; i < 3; i++) {
+            int dotX = x + pad + 175 + i * 20;
+            int dotY = curY + 11;
+            if (i < currentSteps) {
+                g2.setColor(new Color(56, 189, 248)); // 亮青色已走步数
+                g2.fillOval(dotX, dotY, 13, 13);
+            } else {
+                g2.setColor(new Color(71, 85, 105)); // 灰色剩余可用步数
+                g2.drawOval(dotX, dotY, 13, 13);
+            }
+        }
+
+        g2.setColor(new Color(148, 163, 184));
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        g2.drawString("可走 " + state.getRemainingSteps() + " 步 | L键/空格锁边即交换给对手", x + pad + 14, curY + 43);
+        curY += 66;
+
         // 操作指南小卡片
         g2.setColor(new Color(30, 41, 59));
-        int guideHeight = 200;
+        int guideHeight = 190;
         g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, guideHeight, 12, 12));
         g2.setColor(new Color(51, 65, 85));
         g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, guideHeight, 12, 12));

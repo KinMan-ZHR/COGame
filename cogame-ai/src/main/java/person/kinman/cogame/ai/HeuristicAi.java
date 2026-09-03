@@ -30,10 +30,10 @@ public class HeuristicAi implements AiStrategy {
         PlayerState opp = state.getPlayer(aiPlayerId == 1 ? 2 : 1);
         Board board = state.getBoard();
 
-        int maxSteps = (board.getRows() <= 7) ? Math.max(3, searchDepth) : searchDepth;
+        int maxSteps = Math.min(3, Math.max(1, searchDepth));
 
-        // 1. BFS 寻找从当前位置出发、在限制步数内能到达的所有格子及具体路径
-        Map<Long, List<Direction>> reachablePaths = getReachablePaths(board, me.getR(), me.getC(), maxSteps);
+        // 1. BFS 寻找从当前位置出发、在 3 步限制内能到达的所有格子及具体路径 (避开对手身位)
+        Map<Long, List<Direction>> reachablePaths = getReachablePaths(board, me.getR(), me.getC(), opp.getR(), opp.getC(), maxSteps);
 
         double bestScore = -Double.MAX_VALUE;
         List<GameAction> bestActions = new ArrayList<>();
@@ -206,7 +206,7 @@ public class HeuristicAi implements AiStrategy {
         return actions;
     }
 
-    private Map<Long, List<Direction>> getReachablePaths(Board board, int startR, int startC, int maxDepth) {
+    private Map<Long, List<Direction>> getReachablePaths(Board board, int startR, int startC, int oppR, int oppC, int maxDepth) {
         Map<Long, List<Direction>> result = new HashMap<>();
         long startKey = GameEvaluator.encode(startR, startC);
         result.put(startKey, new ArrayList<>());
@@ -229,6 +229,8 @@ public class HeuristicAi implements AiStrategy {
                 if (board.isConnected(r, c, dir)) {
                     int nr = r + dir.getDr();
                     int nc = c + dir.getDc();
+                    if (nr == oppR && nc == oppC) continue; // 对手身位阻挡
+
                     long nextKey = GameEvaluator.encode(nr, nc);
 
                     if (!result.containsKey(nextKey)) {

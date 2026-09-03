@@ -23,6 +23,12 @@ public class GameState {
         this(6, 6);
     }
 
+    public static final int MAX_TURN_STEPS = 3;
+
+    private int turnStartR = 0;
+    private int turnStartC = 0;
+    private int currentTurnSteps = 0;
+
     public GameState(int size) {
         this(size, size);
     }
@@ -38,6 +44,9 @@ public class GameState {
         this.p1 = new PlayerState(1, "我", 0, 0, Direction.DOWN);
         this.p2 = new PlayerState(2, "对手", rows - 1, cols - 1, Direction.UP);
         this.currentTurn = 1;
+        this.turnStartR = 0;
+        this.turnStartC = 0;
+        this.currentTurnSteps = 0;
         this.over = false;
         this.winner = 0;
         this.winReason = "";
@@ -61,6 +70,10 @@ public class GameState {
 
     public void switchTurn() {
         this.currentTurn = (this.currentTurn == 1) ? 2 : 1;
+        PlayerState curr = getCurrentPlayer();
+        this.turnStartR = curr.getR();
+        this.turnStartC = curr.getC();
+        this.currentTurnSteps = 0;
     }
 
     public GameState copy() {
@@ -69,6 +82,9 @@ public class GameState {
         copy.p1 = this.p1.copy();
         copy.p2 = this.p2.copy();
         copy.currentTurn = this.currentTurn;
+        copy.turnStartR = this.turnStartR;
+        copy.turnStartC = this.turnStartC;
+        copy.currentTurnSteps = this.currentTurnSteps;
         copy.over = this.over;
         copy.winner = this.winner;
         copy.winReason = this.winReason;
@@ -181,5 +197,33 @@ public class GameState {
 
     public void setP2UnblockedEdges(int p2UnblockedEdges) {
         this.p2UnblockedEdges = p2UnblockedEdges;
+    }
+
+    public int getTurnStartR() {
+        return turnStartR;
+    }
+
+    public void setTurnStartR(int turnStartR) {
+        this.turnStartR = turnStartR;
+    }
+
+    public int getTurnStartC() {
+        return turnStartC;
+    }
+
+    public void setTurnStartC(int turnStartC) {
+        this.turnStartC = turnStartC;
+    }
+
+    public int getCurrentTurnSteps() {
+        return currentTurnSteps;
+    }
+
+    public void setCurrentTurnSteps(int currentTurnSteps) {
+        this.currentTurnSteps = currentTurnSteps;
+    }
+
+    public int getRemainingSteps() {
+        return Math.max(0, MAX_TURN_STEPS - currentTurnSteps);
     }
 }

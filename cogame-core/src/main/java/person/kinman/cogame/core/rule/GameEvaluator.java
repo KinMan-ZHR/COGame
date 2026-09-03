@@ -225,4 +225,83 @@ public class GameEvaluator {
     public static int decodeC(long key) {
         return (int) key;
     }
+
+    /**
+     * 计算在避开对手所在格子的前提下，从 (r1, c1) 到 (r2, c2) 的最短路径步数（不可达返回 -1）
+     */
+    public static int getDistanceAvoidingOpponent(Board board, int r1, int c1, int r2, int c2, int oppR, int oppC) {
+        if (r1 == r2 && c1 == c2) return 0;
+        if (r2 == oppR && c2 == oppC) return -1;
+
+        int rows = board.getRows();
+        int cols = board.getCols();
+        int[][] dist = new int[rows][cols];
+        for (int[] row : dist) Arrays.fill(row, -1);
+
+        Queue<int[]> queue = new ArrayDeque<>();
+        queue.add(new int[]{r1, c1});
+        dist[r1][c1] = 0;
+
+        while (!queue.isEmpty()) {
+            int[] curr = queue.poll();
+            int r = curr[0];
+            int c = curr[1];
+            int d = dist[r][c];
+
+            if (r == r2 && c == c2) return d;
+
+            for (Direction dir : Direction.values()) {
+                if (board.isConnected(r, c, dir)) {
+                    int nr = r + dir.getDr();
+                    int nc = c + dir.getDc();
+                    if (nr == oppR && nc == oppC) continue; // 对手身位阻挡
+                    if (dist[nr][nc] == -1) {
+                        dist[nr][nc] = d + 1;
+                        queue.add(new int[]{nr, nc});
+                    }
+                }
+            }
+        }
+        return dist[r2][c2];
+    }
+
+    /**
+     * 获取从起点出发在指定步数内可达的所有格子集合（避开对手身位）
+     */
+    public static Set<Long> getReachableWithinSteps(Board board, int startR, int startC, int oppR, int oppC, int maxSteps) {
+        Set<Long> reachable = new HashSet<>();
+        reachable.add(encode(startR, startC));
+
+        int rows = board.getRows();
+        int cols = board.getCols();
+        int[][] dist = new int[rows][cols];
+        for (int[] row : dist) Arrays.fill(row, -1);
+
+        Queue<int[]> queue = new ArrayDeque<>();
+        queue.add(new int[]{startR, startC});
+        dist[startR][startC] = 0;
+
+        while (!queue.isEmpty()) {
+            int[] curr = queue.poll();
+            int r = curr[0];
+            int c = curr[1];
+            int d = dist[r][c];
+
+            if (d >= maxSteps) continue;
+
+            for (Direction dir : Direction.values()) {
+                if (board.isConnected(r, c, dir)) {
+                    int nr = r + dir.getDr();
+                    int nc = c + dir.getDc();
+                    if (nr == oppR && nc == oppC) continue;
+                    if (dist[nr][nc] == -1) {
+                        dist[nr][nc] = d + 1;
+                        reachable.add(encode(nr, nc));
+                        queue.add(new int[]{nr, nc});
+                    }
+                }
+            }
+        }
+        return reachable;
+    }
 }
