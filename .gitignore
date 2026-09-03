@@ -1,4 +1,9 @@
 .idea
 *.iml
-.gitignore
-target
+target/
+**/target/
+logs/
+*.pid
+dependency-reduced-pom.xml
+original-src/
+distribution/*.jar
