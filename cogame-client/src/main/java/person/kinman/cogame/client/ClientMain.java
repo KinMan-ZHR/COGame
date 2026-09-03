@@ -15,6 +15,9 @@ import java.awt.*;
 public class ClientMain {
 
     public static void main(String[] args) {
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
+
         if (GraphicsEnvironment.isHeadless()) {
             System.err.println("当前运行环境为无头环境 (Headless)，不支持启动图形界面。");
             System.err.println("请将 cogame-client.jar 下载到拥有桌面显示环境 (Windows / macOS / Linux GUI) 的客户端机器运行。");

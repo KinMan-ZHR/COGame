@@ -22,6 +22,7 @@ public class ServerMain {
         }
 
         CoGameWebSocketServer server = new CoGameWebSocketServer(port);
+        server.setReuseAddr(true);
         server.start();
 
         logger.info("==============================================");

@@ -164,6 +164,10 @@ public class OnlineController implements GameController {
         return myPlayerId;
     }
 
+    public boolean isGameStarted() {
+        return gameStarted;
+    }
+
     @Override
     public String getModeName() {
         return "网络联机对战 [房间: " + roomId + " | 身位: " + (myPlayerId == 0 ? "连接中" : (myPlayerId == 1 ? "P1(先手)" : "P2(后手)")) + "]";

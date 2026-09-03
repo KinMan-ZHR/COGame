@@ -36,8 +36,14 @@ public class OnlineMatchIntegrationTest {
         });
 
         // 等待双方连接并匹配成功
-        boolean started = startLatch.await(5, TimeUnit.SECONDS);
-        Assertions.assertTrue(started, "双方未能在5秒内成功匹配开局");
+        long deadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < deadline) {
+            if (p1.isGameStarted() && p2.isGameStarted()) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+        Assertions.assertTrue(p1.isGameStarted() && p2.isGameStarted(), "双方未能在5秒内成功匹配开局");
 
         // 验证一个为1，一个为2
         Assertions.assertTrue((p1.getMyPlayerId() == 1 && p2.getMyPlayerId() == 2)
