@@ -3,6 +3,7 @@ package person.kinman.cogame.ai;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import person.kinman.cogame.core.action.GameAction;
+import person.kinman.cogame.core.model.Direction;
 import person.kinman.cogame.core.model.GameState;
 import person.kinman.cogame.core.rule.GameEngine;
 
@@ -52,5 +53,29 @@ public class AiTest {
             Assertions.assertTrue(ok);
         }
         Assertions.assertTrue(state.getCurrentTurn() == 1 || state.isOver());
+    }
+
+    @Test
+    public void testAiChoosesWinningCut() {
+        GameState state = new GameState();
+        // P1 在 (0,0)，其右侧边已被封锁
+        state.getBoard().lockEdge(0, 0, Direction.RIGHT, 1);
+        // AI 位于 (1,0)，朝向 UP。此时若封锁 UP，P1 将被彻底封死在 (0,0)，AI 独占 35 格必胜！
+        state.getP2().setR(1);
+        state.getP2().setC(0);
+        state.getP2().setDirection(Direction.UP);
+        state.setCurrentTurn(2);
+
+        HeuristicAi ai = new HeuristicAi(1);
+        AiDecision decision = ai.computeTurn(state, 2);
+        Assertions.assertNotNull(decision);
+
+        for (GameAction act : decision.getActions()) {
+            GameEngine.executeAction(state, 2, act);
+        }
+        Assertions.assertTrue(state.isOver(), "AI 应当识别并执行必胜封锁");
+        Assertions.assertEquals(2, state.getWinner(), "AI 应当获得胜利");
+        Assertions.assertEquals(35, state.getP2Territory());
+        Assertions.assertEquals(1, state.getP1Territory());
     }
 }

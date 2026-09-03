@@ -38,6 +38,22 @@ public class GameEngineTest {
     }
 
     @Test
+    public void testEdgeLockerTracking() {
+        GameState state = new GameState();
+        // Turn 1: P1 locks edge DOWN of (0,0)
+        boolean locked = GameEngine.executeAction(state, 1, GameAction.lock());
+        Assertions.assertTrue(locked);
+        Assertions.assertEquals(1, state.getBoard().getEdgeLocker(0, 0, Direction.DOWN));
+        Assertions.assertEquals(1, state.getBoard().getEdgeLocker(1, 0, Direction.UP));
+
+        // Turn 2: P2 locks edge UP of (5,5)
+        boolean locked2 = GameEngine.executeAction(state, 2, GameAction.lock());
+        Assertions.assertTrue(locked2);
+        Assertions.assertEquals(2, state.getBoard().getEdgeLocker(5, 5, Direction.UP));
+        Assertions.assertEquals(2, state.getBoard().getEdgeLocker(4, 5, Direction.DOWN));
+    }
+
+    @Test
     public void testDisconnectGameOver() {
         GameState state = new GameState();
         // Disconnect P1 (at 0,0) from the rest of the board:

@@ -172,7 +172,7 @@ public class GameCanvas extends JPanel {
             }
         }
 
-        // 6. 绘制所有边（核心博弈元素：绿色极细通路 vs 红色粗壮发光锁边）
+        // 6. 绘制所有边（核心博弈元素：绿色极细通路 vs P1电光青锁边 vs P2炽金琥珀锁边）
         float lockedEdgeWidth = Math.max(4.5f, cellSize * 0.09f);
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
@@ -180,13 +180,13 @@ public class GameCanvas extends JPanel {
                 int cy = startY + r * cellSize;
 
                 // 上边
-                drawBorderEdge(g2, cx, cy, cx + cellSize, cy, board.isConnected(r, c, Direction.UP), r == 0, lockedEdgeWidth);
+                drawBorderEdge(g2, cx, cy, cx + cellSize, cy, board.isConnected(r, c, Direction.UP), r == 0, board.getEdgeLocker(r, c, Direction.UP), lockedEdgeWidth);
                 // 下边
-                drawBorderEdge(g2, cx, cy + cellSize, cx + cellSize, cy + cellSize, board.isConnected(r, c, Direction.DOWN), r == rows - 1, lockedEdgeWidth);
+                drawBorderEdge(g2, cx, cy + cellSize, cx + cellSize, cy + cellSize, board.isConnected(r, c, Direction.DOWN), r == rows - 1, board.getEdgeLocker(r, c, Direction.DOWN), lockedEdgeWidth);
                 // 左边
-                drawBorderEdge(g2, cx, cy, cx, cy + cellSize, board.isConnected(r, c, Direction.LEFT), c == 0, lockedEdgeWidth);
+                drawBorderEdge(g2, cx, cy, cx, cy + cellSize, board.isConnected(r, c, Direction.LEFT), c == 0, board.getEdgeLocker(r, c, Direction.LEFT), lockedEdgeWidth);
                 // 右边
-                drawBorderEdge(g2, cx + cellSize, cy, cx + cellSize, cy + cellSize, board.isConnected(r, c, Direction.RIGHT), c == cols - 1, lockedEdgeWidth);
+                drawBorderEdge(g2, cx + cellSize, cy, cx + cellSize, cy + cellSize, board.isConnected(r, c, Direction.RIGHT), c == cols - 1, board.getEdgeLocker(r, c, Direction.RIGHT), lockedEdgeWidth);
             }
         }
 
@@ -200,7 +200,7 @@ public class GameCanvas extends JPanel {
         g2.dispose();
     }
 
-    private void drawBorderEdge(Graphics2D g2, int x1, int y1, int x2, int y2, boolean open, boolean isBoundary, float lockedWidth) {
+    private void drawBorderEdge(Graphics2D g2, int x1, int y1, int x2, int y2, boolean open, boolean isBoundary, int locker, float lockedWidth) {
         if (isBoundary) {
             g2.setColor(new Color(71, 85, 105)); // 外棋盘边界：深枪灰色
             g2.setStroke(new BasicStroke(3.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
@@ -212,12 +212,30 @@ public class GameCanvas extends JPanel {
                 g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.drawLine(x1, y1, x2, y2);
             } else {
-                // 已封锁边：高亮度荧光红警示屏障（发光双层线）
-                g2.setColor(new Color(239, 68, 68, 90));
+                // 已封锁边：根据玩家归属进行高对比区分
+                Color glowColor;
+                Color coreColor;
+                if (locker == 1) {
+                    // P1 (先手) 锁边：电光亮青霓虹壁障
+                    glowColor = new Color(6, 182, 212, 110);
+                    coreColor = new Color(34, 211, 238);
+                } else if (locker == 2) {
+                    // P2 (后手/AI) 锁边：暖金琥珀/炽焰霓虹壁障
+                    glowColor = new Color(245, 158, 11, 110);
+                    coreColor = new Color(251, 191, 36);
+                } else {
+                    // 默认警告红
+                    glowColor = new Color(239, 68, 68, 100);
+                    coreColor = new Color(244, 63, 94);
+                }
+
+                // 1. 发光辉光外层
+                g2.setColor(glowColor);
                 g2.setStroke(new BasicStroke(lockedWidth + 3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.drawLine(x1, y1, x2, y2);
 
-                g2.setColor(new Color(244, 63, 94));
+                // 2. 核心鲜亮实体线
+                g2.setColor(coreColor);
                 g2.setStroke(new BasicStroke(lockedWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.drawLine(x1, y1, x2, y2);
             }
@@ -330,21 +348,27 @@ public class GameCanvas extends JPanel {
 
         // 操作指南小卡片
         g2.setColor(new Color(30, 41, 59));
-        int guideHeight = 175;
+        int guideHeight = 200;
         g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, guideHeight, 12, 12));
         g2.setColor(new Color(51, 65, 85));
         g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, guideHeight, 12, 12));
 
         g2.setColor(new Color(241, 245, 249));
         g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        g2.drawString("操作指南 (Controls)", x + pad + 14, curY + 22);
+        g2.drawString("操作指南 & 边框图例", x + pad + 14, curY + 22);
 
-        int lineY = curY + 44;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "WASD / 方向键", "移动并设定朝向"); lineY += 22;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "SPACE", "沿朝向前进一步"); lineY += 22;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "R 键", "顺时针旋转90°"); lineY += 22;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "L 键", "封锁边 (切回合)"); lineY += 22;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "P 键 / F11", "寻路高亮 / 全屏"); lineY += 22;
+        // 边框图例展示
+        int legendY = curY + 40;
+        drawLegendBadge(g2, x + pad + 14, legendY, new Color(16, 185, 129), "畅通通路");
+        drawLegendBadge(g2, x + pad + 115, legendY, new Color(34, 211, 238), "P1封锁");
+        drawLegendBadge(g2, x + pad + 205, legendY, new Color(251, 191, 36), "P2/AI封锁");
+
+        int lineY = curY + 65;
+        drawKeyGuideRow(g2, x + pad + 14, lineY, "WASD / 方向键", "移动并设定朝向"); lineY += 21;
+        drawKeyGuideRow(g2, x + pad + 14, lineY, "SPACE", "沿朝向前进一步"); lineY += 21;
+        drawKeyGuideRow(g2, x + pad + 14, lineY, "R 键", "顺时针旋转90°"); lineY += 21;
+        drawKeyGuideRow(g2, x + pad + 14, lineY, "L 键", "封锁边 (切回合)"); lineY += 21;
+        drawKeyGuideRow(g2, x + pad + 14, lineY, "P 键 / F11", "寻路高亮 / 全屏"); lineY += 21;
         drawKeyGuideRow(g2, x + pad + 14, lineY, "+ 键", "重置棋局");
         curY += guideHeight + 20;
 
@@ -438,5 +462,16 @@ public class GameCanvas extends JPanel {
         g2.setColor(new Color(203, 213, 225));
         g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
         g2.drawString(desc, x + 105, y);
+    }
+
+    private void drawLegendBadge(Graphics2D g2, int x, int y, Color color, String label) {
+        // 绘制小样色条
+        g2.setColor(color);
+        g2.setStroke(new BasicStroke(3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(x, y - 4, x + 16, y - 4);
+
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        g2.setColor(new Color(203, 213, 225));
+        g2.drawString(label, x + 22, y);
     }
 }

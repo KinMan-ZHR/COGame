@@ -42,6 +42,11 @@
                 <artifactId>cogame-ai</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>person.kinman.cogame</groupId>
+                <artifactId>cogame-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <!-- Gson -->
             <dependency>
                 <groupId>com.google.code.gson</groupId>

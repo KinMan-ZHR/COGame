@@ -58,7 +58,7 @@ public class GameEngine {
             }
             case LOCK -> {
                 Direction dir = player.getDirection();
-                boolean locked = board.lockEdge(player.getR(), player.getC(), dir);
+                boolean locked = board.lockEdge(player.getR(), player.getC(), dir, player.getId());
                 if (locked) {
                     // 成功封锁后，检查是否满足终局（双方不再连通）
                     GameEvaluator.evaluateGameOver(state);

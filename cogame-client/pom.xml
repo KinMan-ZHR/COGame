@@ -37,6 +37,11 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>person.kinman.cogame</groupId>
+            <artifactId>cogame-server</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

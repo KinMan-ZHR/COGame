@@ -74,6 +74,10 @@ public class CoGameWebSocketServer extends WebSocketServer {
     @Override
     public void onError(WebSocket conn, Exception ex) {
         logger.error("WebSocket 连接异常: {}", conn != null ? conn.getRemoteSocketAddress() : "null", ex);
+        if (conn == null) {
+            logger.error("服务器级致命异常，退出进程");
+            System.exit(1);
+        }
     }
 
     @Override

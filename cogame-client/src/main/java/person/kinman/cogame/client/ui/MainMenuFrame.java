@@ -66,24 +66,7 @@ public class MainMenuFrame extends JFrame {
                 "13 × 13 (终极拓扑迷宫 - 169格)"
         };
         boardSizeComboBox = new JComboBox<>(sizeOptions);
-        boardSizeComboBox.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        boardSizeComboBox.setBackground(new Color(15, 23, 42));
-        boardSizeComboBox.setForeground(Color.WHITE);
-        boardSizeComboBox.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                label.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
-                if (isSelected) {
-                    label.setBackground(new Color(2, 132, 199));
-                    label.setForeground(Color.WHITE);
-                } else {
-                    label.setBackground(new Color(15, 23, 42));
-                    label.setForeground(new Color(241, 245, 249));
-                }
-                return label;
-            }
-        });
+        styleDarkComboBox(boardSizeComboBox);
         boardSizeComboBox.setSelectedIndex(0);
 
         sizePanel.add(sizeLabel);
@@ -158,6 +141,7 @@ public class MainMenuFrame extends JFrame {
         JComboBox<String> sizeBox = new JComboBox<>(new String[]{
                 "6x6", "7x7", "8x8", "9x9", "10x10", "11x11", "12x12", "13x13"
         });
+        styleDarkComboBox(sizeBox);
         sizeBox.setSelectedIndex(defaultSize - 6);
 
         JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
@@ -180,6 +164,65 @@ public class MainMenuFrame extends JFrame {
                 new GameFrame(new OnlineController(server, room, name, size)).display();
             }
         }
+    }
+
+    private void styleDarkComboBox(JComboBox<String> combo) {
+        combo.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        combo.setBackground(new Color(15, 23, 42));
+        combo.setForeground(Color.WHITE);
+        combo.setFocusable(false);
+        combo.setOpaque(true);
+        combo.setBorder(BorderFactory.createLineBorder(new Color(51, 65, 85), 1, true));
+
+        combo.setUI(new javax.swing.plaf.basic.BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton btn = new JButton() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(new Color(21, 32, 54));
+                        g2.fillRect(0, 0, getWidth(), getHeight());
+
+                        g2.setColor(new Color(56, 189, 248));
+                        int cx = getWidth() / 2;
+                        int cy = getHeight() / 2;
+                        int[] xPoints = {cx - 4, cx + 4, cx};
+                        int[] yPoints = {cy - 2, cy - 2, cy + 3};
+                        g2.fillPolygon(xPoints, yPoints, 3);
+                        g2.dispose();
+                    }
+                };
+                btn.setContentAreaFilled(false);
+                btn.setOpaque(false);
+                btn.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
+                btn.setFocusPainted(false);
+                return btn;
+            }
+
+            @Override
+            public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
+                g.setColor(new Color(15, 23, 42));
+                g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+        });
+
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+                if (isSelected) {
+                    label.setBackground(new Color(2, 132, 199));
+                    label.setForeground(Color.WHITE);
+                } else {
+                    label.setBackground(new Color(15, 23, 42));
+                    label.setForeground(new Color(241, 245, 249));
+                }
+                return label;
+            }
+        });
     }
 
     /**

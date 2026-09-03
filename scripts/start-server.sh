@@ -26,11 +26,15 @@ echo "正在启动 COGame 联机服务端 (tmux 守护会话: cogame-server, 端
 tmux new-session -d -s cogame-server "$JAVA_BIN -jar \"$JAR\" 8088 >> \"$LOG_FILE\" 2>&1"
 sleep 1
 
-if tmux has-session -t cogame-server 2>/dev/null; then
-    echo "COGame 服务端启动成功！(tmux session: cogame-server)"
-    echo "查看实时控制台: tmux attach -t cogame-server"
-    echo "查看日志: tail -f $LOG_FILE"
-else
-    echo "启动失败，请检查日志: $LOG_FILE" >&2
-    exit 1
-fi
+for i in {1..10}; do
+    if ss -lnt | grep -q ":8088 "; then
+        echo "COGame 服务端启动成功！(tmux session: cogame-server, 端口 8088 监听中)"
+        echo "查看实时控制台: tmux attach -t cogame-server"
+        echo "查看日志: tail -f $LOG_FILE"
+        exit 0
+    fi
+    sleep 0.3
+done
+
+echo "启动失败：端口 8088 未能成功监听，请检查日志: $LOG_FILE" >&2
+exit 1
