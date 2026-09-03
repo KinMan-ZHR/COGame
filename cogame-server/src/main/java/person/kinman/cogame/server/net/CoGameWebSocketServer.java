@@ -9,45 +9,85 @@ import person.kinman.cogame.core.net.RoomSummaryDto;
 import person.kinman.cogame.core.net.WsMessage;
 import person.kinman.cogame.server.room.GameRoom;
 import person.kinman.cogame.server.room.RoomManager;
+import person.kinman.cogame.server.security.SecurityGuard;
 import person.kinman.cogame.server.user.UserManager;
 
 import java.net.InetSocketAddress;
 import java.util.List;
 
 /**
- * WebSocket 对战服务器 (支持登录认证、唯一昵称校验、密码房间、大厅列表与随机匹配)
+ * WebSocket 对战服务器 (深度集成应用级安全防御网：防 DDoS 连接轰炸、报文炸弹、高频刷屏与僵尸连接)
  */
 public class CoGameWebSocketServer extends WebSocketServer {
     private static final Logger logger = LoggerFactory.getLogger(CoGameWebSocketServer.class);
 
     private final UserManager userManager = new UserManager();
     private final RoomManager roomManager = new RoomManager();
+    private final SecurityGuard securityGuard = new SecurityGuard();
 
     public CoGameWebSocketServer(int port) {
-        super(new InetSocketAddress(port));
+        this(new InetSocketAddress(port));
     }
 
     public CoGameWebSocketServer(InetSocketAddress address) {
         super(address);
+        // 开启 30 秒 TCP 心跳失联检测，自动清退幽灵/假死连接
+        this.setConnectionLostTimeout(30);
     }
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
+        // 安全拦截：检查单 IP 并发连接数与黑名单状态
+        if (!securityGuard.recordNewConnection(conn)) {
+            logger.warn("[SECURITY] 拦截违规或超额连接: {}", conn.getRemoteSocketAddress());
+            conn.close(1008, "安全策略拦截：该 IP 已达到并发连接数上限或已被临时封禁");
+            return;
+        }
         logger.info("客户端连接成功: {}", conn.getRemoteSocketAddress());
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         logger.info("客户端断开连接: {} (原因: {})", conn.getRemoteSocketAddress(), reason);
+        securityGuard.recordConnectionClosed(conn);
         userManager.logout(conn);
         roomManager.unbindPlayer(conn);
     }
 
     @Override
     public void onMessage(WebSocket conn, String message) {
+        // 1. 安全防御：报文超长阻断 (防内存炸弹/OOM攻击)
+        if (message != null && message.length() > SecurityGuard.MAX_MESSAGE_PAYLOAD_SIZE) {
+            logger.warn("[SECURITY] 拦截超大恶意报文 ({} bytes): {}", message.length(), conn.getRemoteSocketAddress());
+            securityGuard.recordViolation(conn, "超大恶意报文");
+            conn.close(1009, "Message payload too large");
+            return;
+        }
+
+        // 2. 安全防御：频率超限阻断 (防恶意狂发刷屏/打满CPU)
+        if (!securityGuard.checkMessageRate(conn)) {
+            conn.send(WsMessage.error("请求过于频繁，触发安全保护！").toJson());
+            conn.close(1008, "Rate limit exceeded");
+            return;
+        }
+
         try {
             WsMessage msg = WsMessage.fromJson(message);
             if (msg == null || msg.getType() == null) return;
+
+            // 3. 安全防御：输入清洗与合法性校验
+            if (msg.getPlayerName() != null && !SecurityGuard.isValidPlayerName(msg.getPlayerName())) {
+                conn.send(WsMessage.error("玩家昵称包含非法字符或长度不符合规范 (2~16字符)！").toJson());
+                return;
+            }
+            if (msg.getRoomId() != null && !SecurityGuard.isValidRoomId(msg.getRoomId())) {
+                conn.send(WsMessage.error("房间号格式非法 (仅允许字母、数字和中划线，32位以内)！").toJson());
+                return;
+            }
+            if (msg.getBoardSize() > 0) {
+                // 强制规格收敛在 6~13 范围
+                msg.setBoardSize(Math.max(6, Math.min(13, msg.getBoardSize())));
+            }
 
             switch (msg.getType()) {
                 case WsMessage.TYPE_LOGIN -> {
@@ -76,7 +116,6 @@ public class CoGameWebSocketServer extends WebSocketServer {
                             ? msg.getRoomId().trim() : "1001";
                     GameRoom room = roomManager.getRoom(roomId);
                     if (room == null) {
-                        // 若房间尚不存在，作为新房间创建
                         room = roomManager.getOrCreateRoom(roomId, msg.getPassword(), msg.getBoardSize());
                     }
                     boolean joined = room.addPlayer(conn, msg.getPlayerName(), msg.getBoardSize(), msg.getPassword());
@@ -109,6 +148,7 @@ public class CoGameWebSocketServer extends WebSocketServer {
             }
         } catch (Exception e) {
             logger.error("处理客户端消息异常", e);
+            securityGuard.recordViolation(conn, "非法畸形报文");
             conn.send(WsMessage.error("消息解析错误: " + e.getMessage()).toJson());
         }
     }
@@ -124,7 +164,7 @@ public class CoGameWebSocketServer extends WebSocketServer {
 
     @Override
     public void onStart() {
-        logger.info("COGame WebSocket 服务器在端口 [{}] 启动成功！", getPort());
+        logger.info("COGame WebSocket 服务器在端口 [{}] 启动成功！安全防护网已全面激活", getPort());
     }
 
     public UserManager getUserManager() {
@@ -133,5 +173,9 @@ public class CoGameWebSocketServer extends WebSocketServer {
 
     public RoomManager getRoomManager() {
         return roomManager;
+    }
+
+    public SecurityGuard getSecurityGuard() {
+        return securityGuard;
     }
 }
