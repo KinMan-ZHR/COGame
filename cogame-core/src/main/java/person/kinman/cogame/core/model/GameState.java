@@ -35,8 +35,8 @@ public class GameState {
 
     public void reset() {
         this.board = new Board(rows, cols);
-        this.p1 = new PlayerState(1, "谨漫KinMan", 0, 0, Direction.DOWN);
-        this.p2 = new PlayerState(2, "无名之辈", rows - 1, cols - 1, Direction.UP);
+        this.p1 = new PlayerState(1, "我", 0, 0, Direction.DOWN);
+        this.p2 = new PlayerState(2, "对手", rows - 1, cols - 1, Direction.UP);
         this.currentTurn = 1;
         this.over = false;
         this.winner = 0;

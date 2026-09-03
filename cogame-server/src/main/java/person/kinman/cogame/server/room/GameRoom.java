@@ -5,36 +5,66 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.GameState;
+import person.kinman.cogame.core.net.RoomSummaryDto;
 import person.kinman.cogame.core.net.WsMessage;
 import person.kinman.cogame.core.rule.GameEngine;
 
+import java.util.concurrent.CopyOnWriteArraySet;
+
 /**
- * 联机对战房间实例
+ * 联机对战房间实例 (支持密码保护、动态棋盘规格、观战列表预留与大厅状态广播)
  */
 public class GameRoom {
     private static final Logger logger = LoggerFactory.getLogger(GameRoom.class);
 
     private final String roomId;
+    private String password; // 密码，null 或空表示公开无密码
     private WebSocket p1Conn;
     private WebSocket p2Conn;
     private String p1Name = "玩家1";
     private String p2Name = "玩家2";
     private final GameState state;
 
+    // 预留 v2.5 观战者会话集合
+    private final CopyOnWriteArraySet<WebSocket> spectators = new CopyOnWriteArraySet<>();
+
     public GameRoom(String roomId) {
+        this(roomId, null, 6);
+    }
+
+    public GameRoom(String roomId, String password, int boardSize) {
         this.roomId = roomId;
-        this.state = new GameState();
+        this.password = (password != null && !password.trim().isEmpty()) ? password.trim() : null;
+        int size = Math.max(6, Math.min(13, boardSize));
+        this.state = new GameState(size);
     }
 
-    public synchronized boolean addPlayer(WebSocket conn, String playerName) {
-        return addPlayer(conn, playerName, 6);
+    public boolean hasPassword() {
+        return password != null && !password.isEmpty();
     }
 
-    public synchronized boolean addPlayer(WebSocket conn, String playerName, int requestedBoardSize) {
+    public boolean checkPassword(String candidate) {
+        if (!hasPassword()) return true;
+        if (candidate == null) return false;
+        return password.equals(candidate.trim());
+    }
+
+    public void setPassword(String password) {
+        this.password = (password != null && !password.trim().isEmpty()) ? password.trim() : null;
+    }
+
+    public synchronized boolean addPlayer(WebSocket conn, String playerName, int requestedBoardSize, String candidatePassword) {
+        // 校验密码
+        if (!checkPassword(candidatePassword)) {
+            logger.warn("玩家 [{}] 加入房间 [{}] 密码错误", playerName, roomId);
+            conn.send(WsMessage.error("房间密码错误，加入失败！").toJson());
+            return false;
+        }
+
         if (p1Conn == null || p1Conn.isClosed()) {
             p1Conn = conn;
             if (playerName != null && !playerName.trim().isEmpty()) {
-                p1Name = playerName;
+                p1Name = playerName.trim();
             }
             if (requestedBoardSize >= 6 && requestedBoardSize <= 13) {
                 state.setRows(requestedBoardSize);
@@ -42,12 +72,13 @@ public class GameRoom {
                 state.reset();
             }
             state.getP1().setName(p1Name);
-            logger.info("玩家1 [{}] 加入房间 [{}] (棋盘: {}x{})", p1Name, roomId, state.getRows(), state.getCols());
+            logger.info("玩家1 (房主) [{}] 加入房间 [{}] (棋盘: {}x{}, 加锁: {})",
+                    p1Name, roomId, state.getRows(), state.getCols(), hasPassword());
 
             // 通知玩家1已就绪，等待对手
             WsMessage waitMsg = new WsMessage(WsMessage.TYPE_ROOM_INFO);
             waitMsg.setRoomId(roomId);
-            waitMsg.setMessage("已加入房间，棋盘规格 " + state.getRows() + "x" + state.getCols() + "，等待对手连接...");
+            waitMsg.setMessage("房间 [" + roomId + "] 创建成功，棋盘规格 " + state.getRows() + "x" + state.getCols() + "，等待对手加入...");
             waitMsg.setAssignedPlayerId(1);
             waitMsg.setBoardSize(state.getRows());
             conn.send(waitMsg.toJson());
@@ -55,23 +86,26 @@ public class GameRoom {
         } else if (p2Conn == null || p2Conn.isClosed()) {
             p2Conn = conn;
             if (playerName != null && !playerName.trim().isEmpty()) {
-                p2Name = playerName;
+                p2Name = playerName.trim();
             }
             state.getP2().setName(p2Name);
-            logger.info("玩家2 [{}] 加入房间 [{}]，游戏开始！", p2Name, roomId);
+            logger.info("玩家2 [{}] 加入房间 [{}]，对局开战！", p2Name, roomId);
 
             // 双方到齐，重置棋盘并向双方广播 GAME_START
             state.reset();
             state.getP1().setName(p1Name);
             state.getP2().setName(p2Name);
 
-            // 给P1发开始消息
+            // 给 P1 发送开始消息
             WsMessage startMsgP1 = WsMessage.gameStart(roomId, 1, state);
             p1Conn.send(startMsgP1.toJson());
 
-            // 给P2发开始消息
+            // 给 P2 发送开始消息
             WsMessage startMsgP2 = WsMessage.gameStart(roomId, 2, state);
             p2Conn.send(startMsgP2.toJson());
+
+            // 向观战者广播对局开始
+            broadcastToSpectators(WsMessage.stateUpdate(state));
             return true;
         } else {
             // 房间已满
@@ -100,19 +134,16 @@ public class GameRoom {
             return;
         }
 
-        if (state.getCurrentTurn() != playerId) {
-            conn.send(WsMessage.error("当前是对手的回合，请稍候！").toJson());
-            return;
-        }
-
-        boolean success = GameEngine.executeAction(state, playerId, action);
-        if (success) {
+        boolean ok = GameEngine.executeAction(state, playerId, action);
+        if (ok) {
             if (state.isOver()) {
-                logger.info("房间 [{}] 对战结束: {}", roomId, state.getWinReason());
+                logger.info("房间 [{}] 对局决出胜负: 胜者={}, 原因={}", roomId, state.getWinner(), state.getWinReason());
                 broadcast(WsMessage.gameOver(state));
             } else {
                 broadcast(WsMessage.stateUpdate(state));
             }
+        } else {
+            conn.send(WsMessage.error("无效的行动操作！").toJson());
         }
     }
 
@@ -130,18 +161,51 @@ public class GameRoom {
                 p1Conn.send(WsMessage.playerLeft("对手已离开房间！").toJson());
             }
         }
+        spectators.remove(conn);
+    }
+
+    public int getPlayerCount() {
+        int count = 0;
+        if (p1Conn != null && p1Conn.isOpen()) count++;
+        if (p2Conn != null && p2Conn.isOpen()) count++;
+        return count;
+    }
+
+    public synchronized boolean isWaiting() {
+        return getPlayerCount() == 1 && !state.isOver();
     }
 
     public synchronized boolean isEmpty() {
-        boolean p1Dead = (p1Conn == null || p1Conn.isClosed());
-        boolean p2Dead = (p2Conn == null || p2Conn.isClosed());
-        return p1Dead && p2Dead;
+        return getPlayerCount() == 0 && spectators.isEmpty();
     }
 
     public int getPlayerId(WebSocket conn) {
         if (conn == p1Conn) return 1;
         if (conn == p2Conn) return 2;
         return 0;
+    }
+
+    public RoomSummaryDto getSummary() {
+        String status = isWaiting() ? "WAITING" : (getPlayerCount() == 2 ? "PLAYING" : "EMPTY");
+        return new RoomSummaryDto(
+                roomId,
+                p1Name,
+                state.getRows(),
+                getPlayerCount(),
+                hasPassword(),
+                status
+        );
+    }
+
+    public void addSpectator(WebSocket conn) {
+        spectators.add(conn);
+        WsMessage initMsg = WsMessage.stateUpdate(state);
+        initMsg.setMessage("您正在以观战者身份观看对局");
+        conn.send(initMsg.toJson());
+    }
+
+    public void removeSpectator(WebSocket conn) {
+        spectators.remove(conn);
     }
 
     private void broadcast(WsMessage message) {
@@ -152,9 +216,34 @@ public class GameRoom {
         if (p2Conn != null && p2Conn.isOpen()) {
             p2Conn.send(json);
         }
+        broadcastToSpectators(message);
+    }
+
+    private void broadcastToSpectators(WsMessage message) {
+        if (spectators.isEmpty()) return;
+        String json = message.toJson();
+        for (WebSocket ws : spectators) {
+            if (ws.isOpen()) {
+                ws.send(json);
+            } else {
+                spectators.remove(ws);
+            }
+        }
     }
 
     public String getRoomId() {
         return roomId;
+    }
+
+    public GameState getState() {
+        return state;
+    }
+
+    public String getP1Name() {
+        return p1Name;
+    }
+
+    public String getP2Name() {
+        return p2Name;
     }
 }

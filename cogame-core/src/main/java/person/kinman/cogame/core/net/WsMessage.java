@@ -4,12 +4,26 @@ import com.google.gson.Gson;
 import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.GameState;
 
+import java.util.List;
+
 /**
- * WebSocket 通信消息载荷
+ * WebSocket 通信消息载荷 (支持登录认证、房间列表、加锁房间与随机匹配)
  */
 public class WsMessage {
+    // 登录认证协议
+    public static final String TYPE_LOGIN = "LOGIN";
+    public static final String TYPE_LOGIN_SUCCESS = "LOGIN_SUCCESS";
+    public static final String TYPE_LOGIN_FAIL = "LOGIN_FAIL";
+
+    // 房间大厅协议
+    public static final String TYPE_LIST_ROOMS = "LIST_ROOMS";
+    public static final String TYPE_ROOMS_LIST = "ROOMS_LIST";
+    public static final String TYPE_CREATE_ROOM = "CREATE_ROOM";
     public static final String TYPE_JOIN_ROOM = "JOIN_ROOM";
+    public static final String TYPE_RANDOM_JOIN = "RANDOM_JOIN";
     public static final String TYPE_ROOM_INFO = "ROOM_INFO";
+
+    // 对战游戏协议
     public static final String TYPE_GAME_START = "GAME_START";
     public static final String TYPE_ACTION = "ACTION";
     public static final String TYPE_STATE_UPDATE = "STATE_UPDATE";
@@ -20,11 +34,13 @@ public class WsMessage {
     private String type;
     private String roomId;
     private String playerName;
+    private String password;
     private int assignedPlayerId; // 1 or 2
     private int boardSize = 6;
     private GameAction action;
     private GameState state;
     private String message;
+    private List<RoomSummaryDto> rooms;
 
     private static final Gson gson = new Gson();
 
@@ -34,15 +50,64 @@ public class WsMessage {
         this.type = type;
     }
 
+    public static WsMessage login(String playerName) {
+        WsMessage msg = new WsMessage(TYPE_LOGIN);
+        msg.playerName = playerName;
+        return msg;
+    }
+
+    public static WsMessage loginSuccess(String playerName) {
+        WsMessage msg = new WsMessage(TYPE_LOGIN_SUCCESS);
+        msg.playerName = playerName;
+        msg.message = "登录成功！欢迎来到 COGame 对战世界";
+        return msg;
+    }
+
+    public static WsMessage loginFail(String message) {
+        WsMessage msg = new WsMessage(TYPE_LOGIN_FAIL);
+        msg.message = message;
+        return msg;
+    }
+
+    public static WsMessage listRooms() {
+        return new WsMessage(TYPE_LIST_ROOMS);
+    }
+
+    public static WsMessage roomsList(List<RoomSummaryDto> rooms) {
+        WsMessage msg = new WsMessage(TYPE_ROOMS_LIST);
+        msg.rooms = rooms;
+        return msg;
+    }
+
+    public static WsMessage createRoom(String roomId, String playerName, int boardSize, String password) {
+        WsMessage msg = new WsMessage(TYPE_CREATE_ROOM);
+        msg.roomId = roomId;
+        msg.playerName = playerName;
+        msg.boardSize = boardSize;
+        msg.password = password;
+        return msg;
+    }
+
     public static WsMessage joinRoom(String roomId, String playerName) {
-        return joinRoom(roomId, playerName, 6);
+        return joinRoom(roomId, playerName, 6, null);
     }
 
     public static WsMessage joinRoom(String roomId, String playerName, int boardSize) {
+        return joinRoom(roomId, playerName, boardSize, null);
+    }
+
+    public static WsMessage joinRoom(String roomId, String playerName, int boardSize, String password) {
         WsMessage msg = new WsMessage(TYPE_JOIN_ROOM);
         msg.roomId = roomId;
         msg.playerName = playerName;
         msg.boardSize = boardSize;
+        msg.password = password;
+        return msg;
+    }
+
+    public static WsMessage randomJoin(String playerName) {
+        WsMessage msg = new WsMessage(TYPE_RANDOM_JOIN);
+        msg.playerName = playerName;
         return msg;
     }
 
@@ -116,12 +181,28 @@ public class WsMessage {
         this.playerName = playerName;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
     public int getAssignedPlayerId() {
         return assignedPlayerId;
     }
 
     public void setAssignedPlayerId(int assignedPlayerId) {
         this.assignedPlayerId = assignedPlayerId;
+    }
+
+    public int getBoardSize() {
+        return boardSize;
+    }
+
+    public void setBoardSize(int boardSize) {
+        this.boardSize = boardSize;
     }
 
     public GameAction getAction() {
@@ -148,11 +229,11 @@ public class WsMessage {
         this.message = message;
     }
 
-    public int getBoardSize() {
-        return boardSize;
+    public List<RoomSummaryDto> getRooms() {
+        return rooms;
     }
 
-    public void setBoardSize(int boardSize) {
-        this.boardSize = boardSize;
+    public void setRooms(List<RoomSummaryDto> rooms) {
+        this.rooms = rooms;
     }
 }

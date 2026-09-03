@@ -1,12 +1,18 @@
 package person.kinman.cogame.client.ui;
 
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
 import person.kinman.cogame.client.controller.AiController;
 import person.kinman.cogame.client.controller.LocalController;
-import person.kinman.cogame.client.controller.OnlineController;
+import person.kinman.cogame.client.profile.ProfileManager;
+import person.kinman.cogame.core.net.WsMessage;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
+import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 启动主菜单：高对比度深邃科技风界面，支持 6x6~13x13 棋盘规格选择与自绘高可见度模式按钮
@@ -15,7 +21,7 @@ public class MainMenuFrame extends JFrame {
     private final JComboBox<String> boardSizeComboBox;
 
     public MainMenuFrame() {
-        this.setTitle("COGame - 《端脑》隔断棋盘博弈 (Ver 2.1)");
+        this.setTitle("COGame - 《端脑》隔断棋盘博弈 (Ver 2.2)");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(540, 560);
         this.setLocationRelativeTo(null);
@@ -28,13 +34,13 @@ public class MainMenuFrame extends JFrame {
 
         // 1. 标题与副标题
         JLabel titleLabel = new JLabel("端 脑 · 封 锁 博 弈");
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 26));
         titleLabel.setForeground(new Color(248, 250, 252));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel subLabel = new JLabel("Die Now Grid Disconnection Strategy Game");
-        subLabel.setFont(new Font("SansSerif", Font.ITALIC, 13));
-        subLabel.setForeground(new Color(148, 163, 184));
+        JLabel subLabel = new JLabel("TOPOLOGICAL BLOCKADE STRATEGY");
+        subLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        subLabel.setForeground(new Color(56, 189, 248)); // 电光青色
         subLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         mainPanel.add(titleLabel);
@@ -102,15 +108,15 @@ public class MainMenuFrame extends JFrame {
         });
 
         ModernMenuButton btnOnline = new ModernMenuButton(
-                "③ 网络联机对战 (Online PvP)",
-                "WebSocket 跨网互联 · 房间号秒配对战",
-                new Color(124, 58, 237),
-                new Color(147, 51, 234),
+                "③ 网络联机对战 (Online Lobby)",
+                "前置登录认证 · 房间列表 · 密码房 · 随机匹配",
                 new Color(109, 40, 217),
+                new Color(124, 58, 237),
+                new Color(91, 33, 182),
                 new Color(192, 132, 252)
         );
         btnOnline.addActionListener(e -> {
-            showOnlineDialog(getSelectedBoardSize());
+            showLoginAndLobbyFlow();
         });
 
         mainPanel.add(btnLocal);
@@ -134,35 +140,121 @@ public class MainMenuFrame extends JFrame {
         return boardSizeComboBox.getSelectedIndex() + 6;
     }
 
-    private void showOnlineDialog(int defaultSize) {
-        JTextField serverField = new JTextField("ws://127.0.0.1:8088");
-        JTextField roomField = new JTextField("1001");
-        JTextField nameField = new JTextField("玩家_" + (int) (Math.random() * 900 + 100));
-        JComboBox<String> sizeBox = new JComboBox<>(new String[]{
-                "6x6", "7x7", "8x8", "9x9", "10x10", "11x11", "12x12", "13x13"
-        });
-        styleDarkComboBox(sizeBox);
-        sizeBox.setSelectedIndex(defaultSize - 6);
+    private void showLoginAndLobbyFlow() {
+        ProfileManager.Profile profile = ProfileManager.loadProfile();
+        String defaultServer = (profile.lastServerUrl != null && !profile.lastServerUrl.isEmpty())
+                ? profile.lastServerUrl : "ws://127.0.0.1:8088";
+        String defaultNick = (profile.hasLoggedInOnline && profile.nickname != null && !"我".equals(profile.nickname))
+                ? profile.nickname : "玩家_" + (int) (Math.random() * 900 + 100);
 
-        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
+        JTextField serverField = new JTextField(defaultServer);
+        JTextField nameField = new JTextField(defaultNick);
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 6, 6));
         panel.add(new JLabel("对战服务器 WebSocket 地址:"));
         panel.add(serverField);
-        panel.add(new JLabel("房间编号 (相同房间号自动对战):"));
-        panel.add(roomField);
-        panel.add(new JLabel("我的昵称:"));
-        panel.add(nameField);
-        panel.add(new JLabel("棋盘规格 (房主设定):"));
-        panel.add(sizeBox);
+        JLabel hint = new JLabel("说明: 本机启动服务端填 ws://127.0.0.1:8088；远程对战请填服务器实际IP");
+        hint.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        hint.setForeground(new Color(148, 163, 184));
+        panel.add(hint);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "加入联机对战", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        panel.add(new JLabel("我的独立玩家昵称 (全服唯一):"));
+        panel.add(nameField);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "玩家前置登录与在线认证",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
         if (result == JOptionPane.OK_OPTION) {
             String server = serverField.getText().trim();
-            String room = roomField.getText().trim();
-            String name = nameField.getText().trim();
-            int size = sizeBox.getSelectedIndex() + 6;
-            if (!server.isEmpty() && !room.isEmpty()) {
-                new GameFrame(new OnlineController(server, room, name, size)).display();
+            String nickname = nameField.getText().trim();
+
+            if (server.isEmpty() || nickname.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "服务器地址与昵称均不能为空！", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
             }
+
+            performLogin(server, nickname);
+        }
+    }
+
+    private void performLogin(String serverUrl, String nickname) {
+        JDialog waitDialog = new JDialog(this, "登录认证中", true);
+        waitDialog.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        waitDialog.add(new JLabel("正在连接服务器并校验唯一昵称，请稍候..."));
+        waitDialog.setSize(380, 110);
+        waitDialog.setLocationRelativeTo(this);
+
+        final String[] loginError = {null};
+        final boolean[] loginSuccess = {false};
+
+        Thread loginThread = new Thread(() -> {
+            WebSocketClient testClient = null;
+            try {
+                CountDownLatch latch = new CountDownLatch(1);
+                testClient = new WebSocketClient(new URI(serverUrl)) {
+                    @Override
+                    public void onOpen(ServerHandshake handshakedata) {
+                        send(WsMessage.login(nickname).toJson());
+                    }
+
+                    @Override
+                    public void onMessage(String message) {
+                        try {
+                            WsMessage resp = WsMessage.fromJson(message);
+                            if (resp != null) {
+                                if (WsMessage.TYPE_LOGIN_SUCCESS.equals(resp.getType())) {
+                                    loginSuccess[0] = true;
+                                    latch.countDown();
+                                } else if (WsMessage.TYPE_LOGIN_FAIL.equals(resp.getType())) {
+                                    loginError[0] = resp.getMessage();
+                                    latch.countDown();
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
+
+                    @Override
+                    public void onClose(int code, String reason, boolean remote) {
+                        if (!loginSuccess[0] && loginError[0] == null) {
+                            loginError[0] = "与服务器断开: " + reason;
+                        }
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onError(Exception ex) {
+                        loginError[0] = (ex != null) ? ex.getMessage() : "网络连接失败";
+                        latch.countDown();
+                    }
+                };
+
+                testClient.connect();
+                boolean finished = latch.await(4, TimeUnit.SECONDS);
+                if (!finished && !loginSuccess[0]) {
+                    loginError[0] = "连接服务器超时 (4秒未响应)";
+                }
+            } catch (Exception e) {
+                loginError[0] = e.getMessage();
+            } finally {
+                if (testClient != null && testClient.isOpen()) {
+                    testClient.close();
+                }
+                SwingUtilities.invokeLater(waitDialog::dispose);
+            }
+        });
+
+        loginThread.start();
+        waitDialog.setVisible(true);
+
+        if (loginSuccess[0]) {
+            // 登录成功，持久化本地配置（使得单机模式自动使用该昵称）
+            ProfileManager.saveProfile(nickname, serverUrl);
+            new OnlineLobbyFrame(serverUrl, nickname).setVisible(true);
+        } else {
+            String reason = (loginError[0] != null) ? loginError[0] : "连接被拒绝";
+            JOptionPane.showMessageDialog(this,
+                    "❌ 登录认证失败: " + reason + "\n\n排查建议：\n1. 若服务端运行在局域网/云服务器，请勿使用 127.0.0.1，请填写服务器实际 IP（如 172.16.24.127）\n2. 确保服务端的 8088 端口已被防火墙放行\n3. 若提示昵称已被占用，请更换独一无二的昵称",
+                    "连接与登录失败", JOptionPane.ERROR_MESSAGE);
         }
     }
 

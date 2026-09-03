@@ -10,13 +10,14 @@ import java.net.URI;
 import java.util.function.Consumer;
 
 /**
- * 联机对战控制器：与远端 WebSocket 服务器同步
+ * 联机对战控制器：与远端 WebSocket 服务器同步 (支持密码保护与动态分配)
  */
 public class OnlineController implements GameController {
     private final String serverUrl;
-    private final String roomId;
+    private String roomId;
     private final String playerName;
     private final int boardSize;
+    private final String password;
 
     private WebSocketClient wsClient;
     private GameState state;
@@ -27,14 +28,19 @@ public class OnlineController implements GameController {
     private Consumer<String> onNotification;
 
     public OnlineController(String serverUrl, String roomId, String playerName) {
-        this(serverUrl, roomId, playerName, 6);
+        this(serverUrl, roomId, playerName, 6, null);
     }
 
     public OnlineController(String serverUrl, String roomId, String playerName, int boardSize) {
+        this(serverUrl, roomId, playerName, boardSize, null);
+    }
+
+    public OnlineController(String serverUrl, String roomId, String playerName, int boardSize, String password) {
         this.serverUrl = serverUrl;
-        this.roomId = roomId;
+        this.roomId = (roomId != null && !roomId.trim().isEmpty()) ? roomId.trim() : null;
         this.playerName = playerName;
         this.boardSize = boardSize;
+        this.password = password;
         this.state = new GameState(boardSize);
         initConnection();
     }
@@ -45,10 +51,15 @@ public class OnlineController implements GameController {
             wsClient = new WebSocketClient(uri) {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
-                    notifyMessage("连接服务器成功，正在加入房间 [" + roomId + "] (棋盘规格: " + boardSize + "x" + boardSize + ")...");
-                    // 发送加入房间消息
-                    WsMessage joinMsg = WsMessage.joinRoom(roomId, playerName, boardSize);
-                    send(joinMsg.toJson());
+                    if (roomId != null) {
+                        notifyMessage("连接成功，正在加入房间 [" + roomId + "] (规格: " + boardSize + "x" + boardSize + ")...");
+                        WsMessage joinMsg = WsMessage.joinRoom(roomId, playerName, boardSize, password);
+                        send(joinMsg.toJson());
+                    } else {
+                        notifyMessage("连接成功，正在为您随机匹配开放房间...");
+                        WsMessage randomMsg = WsMessage.randomJoin(playerName);
+                        send(randomMsg.toJson());
+                    }
                 }
 
                 @Override
@@ -59,16 +70,26 @@ public class OnlineController implements GameController {
 
                         switch (msg.getType()) {
                             case WsMessage.TYPE_ROOM_INFO -> {
+                                if (msg.getRoomId() != null) {
+                                    roomId = msg.getRoomId();
+                                }
                                 myPlayerId = msg.getAssignedPlayerId();
+                                if (msg.getBoardSize() >= 6 && msg.getBoardSize() <= 13) {
+                                    state = new GameState(msg.getBoardSize());
+                                    notifyState();
+                                }
                                 notifyMessage(msg.getMessage() != null ? msg.getMessage() : "等待其他玩家加入...");
                             }
                             case WsMessage.TYPE_GAME_START -> {
                                 gameStarted = true;
+                                if (msg.getRoomId() != null) {
+                                    roomId = msg.getRoomId();
+                                }
                                 myPlayerId = msg.getAssignedPlayerId();
                                 if (msg.getState() != null) {
                                     state = msg.getState();
                                 }
-                                notifyMessage("对手已就绪，游戏开始！你是 " + (myPlayerId == 1 ? "先手(P1)" : "后手(P2)"));
+                                notifyMessage("⚔️ 对手已就绪，对局开始！您是 " + (myPlayerId == 1 ? "先手(P1)" : "后手(P2)"));
                                 notifyState();
                             }
                             case WsMessage.TYPE_STATE_UPDATE -> {
@@ -81,14 +102,14 @@ public class OnlineController implements GameController {
                                 if (msg.getState() != null) {
                                     state = msg.getState();
                                     notifyState();
-                                    notifyMessage("游戏结束！" + state.getWinReason());
+                                    notifyMessage("🏆 游戏结束！" + state.getWinReason());
                                 }
                             }
                             case WsMessage.TYPE_PLAYER_LEFT -> {
-                                notifyMessage("提示: " + msg.getMessage());
+                                notifyMessage("⚠️ 对手已离开房间！" + (msg.getMessage() != null ? msg.getMessage() : ""));
                             }
                             case WsMessage.TYPE_ERROR -> {
-                                notifyMessage("错误: " + msg.getMessage());
+                                notifyMessage("❌ 提示: " + msg.getMessage());
                             }
                         }
                     } catch (Exception e) {
@@ -98,12 +119,12 @@ public class OnlineController implements GameController {
 
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
-                    notifyMessage("与服务器连接断开: " + reason);
+                    notifyMessage("⚠️ 与服务器连接断开: " + reason);
                 }
 
                 @Override
                 public void onError(Exception ex) {
-                    notifyMessage("网络连接异常: " + ex.getMessage());
+                    notifyMessage("❌ 网络连接异常: " + (ex != null ? ex.getMessage() : "未知"));
                 }
             };
 
@@ -154,6 +175,10 @@ public class OnlineController implements GameController {
         }
     }
 
+    public boolean isGameStarted() {
+        return gameStarted;
+    }
+
     @Override
     public GameState getGameState() {
         return state;
@@ -164,13 +189,10 @@ public class OnlineController implements GameController {
         return myPlayerId;
     }
 
-    public boolean isGameStarted() {
-        return gameStarted;
-    }
-
     @Override
     public String getModeName() {
-        return "网络联机对战 [房间: " + roomId + " | 身位: " + (myPlayerId == 0 ? "连接中" : (myPlayerId == 1 ? "P1(先手)" : "P2(后手)")) + "]";
+        String roomTag = (roomId != null) ? " [房号:" + roomId + "]" : "";
+        return "网络联机对战" + roomTag;
     }
 
     @Override
@@ -185,7 +207,7 @@ public class OnlineController implements GameController {
 
     @Override
     public void close() {
-        if (wsClient != null) {
+        if (wsClient != null && wsClient.isOpen()) {
             wsClient.close();
         }
     }

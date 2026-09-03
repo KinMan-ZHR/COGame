@@ -20,6 +20,8 @@ public class LocalController implements GameController {
 
     public LocalController(int boardSize) {
         this.state = new GameState(boardSize);
+        this.state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
+        this.state.getP2().setName("玩家2 (P2)");
     }
 
     @Override
@@ -37,6 +39,8 @@ public class LocalController implements GameController {
     @Override
     public void resetGame() {
         state.reset();
+        state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
+        state.getP2().setName("玩家2 (P2)");
         if (onStateChanged != null) {
             onStateChanged.accept(state);
         }

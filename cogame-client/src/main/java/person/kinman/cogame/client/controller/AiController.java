@@ -28,7 +28,8 @@ public class AiController implements GameController {
 
     public AiController(int boardSize) {
         this.state = new GameState(boardSize);
-        this.state.getP2().setName("端脑AI");
+        this.state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
+        this.state.getP2().setName("端脑 AI (P2)");
     }
 
     @Override
@@ -91,7 +92,8 @@ public class AiController implements GameController {
     @Override
     public void resetGame() {
         state.reset();
-        state.getP2().setName("端脑AI");
+        state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
+        state.getP2().setName("端脑 AI (P2)");
         aiThinking = false;
         notifyState();
     }
