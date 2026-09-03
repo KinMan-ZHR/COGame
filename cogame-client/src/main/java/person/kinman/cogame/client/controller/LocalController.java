@@ -10,9 +10,17 @@ import java.util.function.Consumer;
  * 单机双人控制器：同一台设备、同一键盘交替轮流行动
  */
 public class LocalController implements GameController {
-    private final GameState state = new GameState();
+    private final GameState state;
     private Consumer<GameState> onStateChanged;
     private Consumer<String> onNotification;
+
+    public LocalController() {
+        this(6);
+    }
+
+    public LocalController(int boardSize) {
+        this.state = new GameState(boardSize);
+    }
 
     @Override
     public void handleUserAction(GameAction action) {

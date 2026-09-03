@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  * 人机对战控制器：玩家作为P1，内置启发式算法作为P2
  */
 public class AiController implements GameController {
-    private final GameState state = new GameState();
+    private final GameState state;
     private final HeuristicAi ai = new HeuristicAi(3);
     private final ExecutorService aiExecutor = Executors.newSingleThreadExecutor();
 
@@ -23,7 +23,12 @@ public class AiController implements GameController {
     private volatile boolean aiThinking = false;
 
     public AiController() {
-        state.getP2().setName("端脑AI");
+        this(6);
+    }
+
+    public AiController(int boardSize) {
+        this.state = new GameState(boardSize);
+        this.state.getP2().setName("端脑AI");
     }
 
     @Override

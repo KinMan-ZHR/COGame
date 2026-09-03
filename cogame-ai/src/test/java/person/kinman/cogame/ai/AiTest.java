@@ -32,4 +32,25 @@ public class AiTest {
         // After AI locks, turn should either switch back to P1 or game is over
         Assertions.assertTrue(state.getCurrentTurn() == 1 || state.isOver());
     }
+
+    @Test
+    public void testAiOn13x13Board() {
+        GameState state = new GameState(13);
+        HeuristicAi ai = new HeuristicAi(2);
+
+        // P1 moves and locks on 13x13
+        GameEngine.executeAction(state, 1, GameAction.lock());
+        Assertions.assertEquals(2, state.getCurrentTurn());
+
+        // AI computes move from (12, 12)
+        AiDecision decision = ai.computeTurn(state, 2);
+        Assertions.assertNotNull(decision);
+        Assertions.assertFalse(decision.getActions().isEmpty());
+
+        for (GameAction action : decision.getActions()) {
+            boolean ok = GameEngine.executeAction(state, 2, action);
+            Assertions.assertTrue(ok);
+        }
+        Assertions.assertTrue(state.getCurrentTurn() == 1 || state.isOver());
+    }
 }

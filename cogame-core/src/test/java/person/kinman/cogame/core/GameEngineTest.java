@@ -52,4 +52,28 @@ public class GameEngineTest {
         Assertions.assertEquals(35, state.getP2Territory()); // remaining 35 cells
         Assertions.assertEquals(2, state.getWinner()); // P2 wins
     }
+
+    @Test
+    public void testLargeBoard13x13() {
+        GameState state = new GameState(13);
+        Assertions.assertEquals(13, state.getRows());
+        Assertions.assertEquals(13, state.getCols());
+        Assertions.assertEquals(0, state.getP1().getR());
+        Assertions.assertEquals(0, state.getP1().getC());
+        Assertions.assertEquals(12, state.getP2().getR());
+        Assertions.assertEquals(12, state.getP2().getC());
+
+        // Test path exists between (0,0) and (12,12)
+        Assertions.assertTrue(GameEvaluator.hasPath(state.getBoard(), 0, 0, 12, 12));
+
+        // Test moving and locking on 13x13
+        boolean moved = GameEngine.executeAction(state, 1, GameAction.changeDirMove(Direction.RIGHT));
+        Assertions.assertTrue(moved);
+        Assertions.assertEquals(0, state.getP1().getR());
+        Assertions.assertEquals(1, state.getP1().getC());
+
+        boolean locked = GameEngine.executeAction(state, 1, GameAction.lock());
+        Assertions.assertTrue(locked);
+        Assertions.assertEquals(2, state.getCurrentTurn());
+    }
 }

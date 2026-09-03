@@ -48,7 +48,7 @@ public class CoGameWebSocketServer extends WebSocketServer {
                     String roomId = (msg.getRoomId() != null && !msg.getRoomId().trim().isEmpty())
                             ? msg.getRoomId().trim() : "default";
                     GameRoom room = roomManager.getOrCreateRoom(roomId);
-                    boolean joined = room.addPlayer(conn, msg.getPlayerName());
+                    boolean joined = room.addPlayer(conn, msg.getPlayerName(), msg.getBoardSize());
                     if (joined) {
                         roomManager.bindPlayer(conn, room);
                     }

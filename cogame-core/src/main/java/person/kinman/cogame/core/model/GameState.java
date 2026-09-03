@@ -4,6 +4,8 @@ package person.kinman.cogame.core.model;
  * 完整对战游戏状态（可序列化为网络 JSON 快照）
  */
 public class GameState {
+    private int rows = 6;
+    private int cols = 6;
     private Board board;
     private PlayerState p1;
     private PlayerState p2;
@@ -18,13 +20,23 @@ public class GameState {
     private int p2UnblockedEdges;
 
     public GameState() {
+        this(6, 6);
+    }
+
+    public GameState(int size) {
+        this(size, size);
+    }
+
+    public GameState(int rows, int cols) {
+        this.rows = Math.max(6, Math.min(13, rows));
+        this.cols = Math.max(6, Math.min(13, cols));
         reset();
     }
 
     public void reset() {
-        this.board = new Board();
+        this.board = new Board(rows, cols);
         this.p1 = new PlayerState(1, "谨漫KinMan", 0, 0, Direction.DOWN);
-        this.p2 = new PlayerState(2, "无名之辈", 5, 5, Direction.UP);
+        this.p2 = new PlayerState(2, "无名之辈", rows - 1, cols - 1, Direction.UP);
         this.currentTurn = 1;
         this.over = false;
         this.winner = 0;
@@ -52,7 +64,7 @@ public class GameState {
     }
 
     public GameState copy() {
-        GameState copy = new GameState();
+        GameState copy = new GameState(this.rows, this.cols);
         copy.board = this.board.copy();
         copy.p1 = this.p1.copy();
         copy.p2 = this.p2.copy();
@@ -65,6 +77,22 @@ public class GameState {
         copy.p1UnblockedEdges = this.p1UnblockedEdges;
         copy.p2UnblockedEdges = this.p2UnblockedEdges;
         return copy;
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public void setRows(int rows) {
+        this.rows = rows;
+    }
+
+    public int getCols() {
+        return cols;
+    }
+
+    public void setCols(int cols) {
+        this.cols = cols;
     }
 
     public Board getBoard() {

@@ -21,6 +21,7 @@ public class WsMessage {
     private String roomId;
     private String playerName;
     private int assignedPlayerId; // 1 or 2
+    private int boardSize = 6;
     private GameAction action;
     private GameState state;
     private String message;
@@ -34,9 +35,14 @@ public class WsMessage {
     }
 
     public static WsMessage joinRoom(String roomId, String playerName) {
+        return joinRoom(roomId, playerName, 6);
+    }
+
+    public static WsMessage joinRoom(String roomId, String playerName, int boardSize) {
         WsMessage msg = new WsMessage(TYPE_JOIN_ROOM);
         msg.roomId = roomId;
         msg.playerName = playerName;
+        msg.boardSize = boardSize;
         return msg;
     }
 
@@ -140,5 +146,13 @@ public class WsMessage {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public int getBoardSize() {
+        return boardSize;
+    }
+
+    public void setBoardSize(int boardSize) {
+        this.boardSize = boardSize;
     }
 }

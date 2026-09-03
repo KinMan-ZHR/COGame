@@ -27,19 +27,29 @@ public class GameRoom {
     }
 
     public synchronized boolean addPlayer(WebSocket conn, String playerName) {
+        return addPlayer(conn, playerName, 6);
+    }
+
+    public synchronized boolean addPlayer(WebSocket conn, String playerName, int requestedBoardSize) {
         if (p1Conn == null || p1Conn.isClosed()) {
             p1Conn = conn;
             if (playerName != null && !playerName.trim().isEmpty()) {
                 p1Name = playerName;
             }
+            if (requestedBoardSize >= 6 && requestedBoardSize <= 13) {
+                state.setRows(requestedBoardSize);
+                state.setCols(requestedBoardSize);
+                state.reset();
+            }
             state.getP1().setName(p1Name);
-            logger.info("玩家1 [{}] 加入房间 [{}]", p1Name, roomId);
+            logger.info("玩家1 [{}] 加入房间 [{}] (棋盘: {}x{})", p1Name, roomId, state.getRows(), state.getCols());
 
             // 通知玩家1已就绪，等待对手
             WsMessage waitMsg = new WsMessage(WsMessage.TYPE_ROOM_INFO);
             waitMsg.setRoomId(roomId);
-            waitMsg.setMessage("已加入房间，等待对手连接...");
+            waitMsg.setMessage("已加入房间，棋盘规格 " + state.getRows() + "x" + state.getCols() + "，等待对手连接...");
             waitMsg.setAssignedPlayerId(1);
+            waitMsg.setBoardSize(state.getRows());
             conn.send(waitMsg.toJson());
             return true;
         } else if (p2Conn == null || p2Conn.isClosed()) {

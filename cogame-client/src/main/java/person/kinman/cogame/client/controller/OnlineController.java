@@ -16,9 +16,10 @@ public class OnlineController implements GameController {
     private final String serverUrl;
     private final String roomId;
     private final String playerName;
+    private final int boardSize;
 
     private WebSocketClient wsClient;
-    private GameState state = new GameState();
+    private GameState state;
     private int myPlayerId = 0; // 等待服务端分配 (1 or 2)
     private boolean gameStarted = false;
 
@@ -26,9 +27,15 @@ public class OnlineController implements GameController {
     private Consumer<String> onNotification;
 
     public OnlineController(String serverUrl, String roomId, String playerName) {
+        this(serverUrl, roomId, playerName, 6);
+    }
+
+    public OnlineController(String serverUrl, String roomId, String playerName, int boardSize) {
         this.serverUrl = serverUrl;
         this.roomId = roomId;
         this.playerName = playerName;
+        this.boardSize = boardSize;
+        this.state = new GameState(boardSize);
         initConnection();
     }
 
@@ -38,9 +45,9 @@ public class OnlineController implements GameController {
             wsClient = new WebSocketClient(uri) {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
-                    notifyMessage("连接服务器成功，正在加入房间 [" + roomId + "]...");
+                    notifyMessage("连接服务器成功，正在加入房间 [" + roomId + "] (棋盘规格: " + boardSize + "x" + boardSize + ")...");
                     // 发送加入房间消息
-                    WsMessage joinMsg = WsMessage.joinRoom(roomId, playerName);
+                    WsMessage joinMsg = WsMessage.joinRoom(roomId, playerName, boardSize);
                     send(joinMsg.toJson());
                 }
 

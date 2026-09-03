@@ -204,9 +204,9 @@
 <body>
     <div class="container">
         <header>
-            <span class="badge">《端脑》经典博弈演进</span>
-            <h1>COGame - 6×6 隔断棋盘博弈</h1>
-            <p class="subtitle">模拟漫画《端脑》中双方在 6×6 矩阵中盲目移动并互相封锁通路，直到连通性中断决出胜负的策略棋盘游戏。</p>
+            <span class="badge">《端脑》经典博弈演进 · v2.1 视觉与规格升级</span>
+            <h1>COGame - 《端脑》隔断棋盘博弈</h1>
+            <p class="subtitle">双方在矩阵中移动并封锁通路，直到连通性阻断决出胜负。现已全面支持 <strong>6×6 ~ 13×13</strong> 自由规格选择与自适应全屏！</p>
         </header>
 
         <div class="card download-box">
@@ -214,10 +214,28 @@
                 <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
                 一键下载客户端 (COGame-Client.jar)
             </a>
-            <div class="file-info">版本: v2.0.0 (全量独立可执行包) | 大小: 约 63 MB | 环境要求: Java 17 或以上</div>
+            <div class="file-info">版本: v2.1.0 (全量独立可执行包) | 大小: 约 63 MB | 环境要求: Java 17 或以上</div>
             <div class="server-status">
                 <span class="status-dot"></span>
                 <span>联机对战服务器正在运行中：<code>ws://&lt;本服务器IP&gt;:8088</code></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>✨ v2.1 全新升级亮点</h2>
+            <div class="modes-grid">
+                <div class="mode-item">
+                    <h3>🎨 高对比度清晰视觉</h3>
+                    <p>重构高对比度暗黑科技棋盘，翠绿明亮通路 vs 炽红粗壮发光封锁壁障，数字编号与玩家状态一目了然。</p>
+                </div>
+                <div class="mode-item">
+                    <h3>📐 6×6 ~ 13×13 自由规格</h3>
+                    <p>不仅保留经典 36 格对战，更支持最大 13×13 (169格) 的庞大战略迷阵，AI 与联机均已完美适配。</p>
+                </div>
+                <div class="mode-item">
+                    <h3>🖥️ 自由缩放与 F11 全屏</h3>
+                    <p>窗口大小自适应计算棋盘与文字缩放，支持随时按 F11 切换沉浸式全屏博弈！</p>
+                </div>
             </div>
         </div>
 
@@ -243,11 +261,11 @@
             <h2>🚀 客户端运行方式</h2>
             <p style="color: var(--text-muted); font-size: 14px;">下载 <code>COGame-Client.jar</code> 到本地电脑后，双击即可运行（或在终端执行）：</p>
             <pre>java -jar COGame-Client.jar</pre>
-            <p style="color: var(--text-muted); font-size: 13px; margin-top: 10px;">也可通过命令行参数快速进入指定模式：</p>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 10px;">也可通过命令行参数快速指定模式与棋盘规格：</p>
             <ul>
-                <li>单机模式：<code>java -jar COGame-Client.jar --local</code></li>
-                <li>人机模式：<code>java -jar COGame-Client.jar --ai</code></li>
-                <li>联机对战：<code>java -jar COGame-Client.jar --online ws://&lt;服务器IP&gt;:8088 1001 玩家名</code></li>
+                <li>单机模式：<code>java -jar COGame-Client.jar --local [6-13]</code></li>
+                <li>人机模式：<code>java -jar COGame-Client.jar --ai [6-13]</code></li>
+                <li>联机对战：<code>java -jar COGame-Client.jar --online ws://&lt;服务器IP&gt;:8088 1001 玩家名 [6-13]</code></li>
             </ul>
         </div>
 
@@ -258,8 +276,9 @@
                 <li><strong>空格键 (SPACE)</strong>：沿角色当前朝向前进一步。</li>
                 <li><strong>R 键</strong>：角色顺时针旋转 90 度。</li>
                 <li><strong>L 键</strong>：<strong>封锁当前朝向的边（关键操作）</strong>，若封锁成功则切换至对手回合！</li>
-                <li><strong>P 键</strong>：开启/隐藏双方当前的最短连通路径（蓝色高亮）。</li>
-                <li><strong>+ 键</strong>：重置棋局重新开始。</li>
+                <li><strong>P 键</strong>：开启/隐藏双方当前的最短连通路径（高亮显示）。</li>
+                <li><strong>F11 键</strong>：<strong>开启 / 退出自适应全屏模式</strong>。</li>
+                <li><strong>+ 键 / = 键</strong>：重置棋局重新开始。</li>
             </ul>
         </div>
 

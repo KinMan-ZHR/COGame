@@ -6,17 +6,19 @@ import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.Direction;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 /**
- * 游戏主窗口
+ * 游戏主窗口：支持自适应窗口缩放与 F11 全屏切换
  */
 public class GameFrame extends JFrame {
     private final GameController controller;
     private final GameCanvas canvas;
+    private boolean isFullScreen = false;
 
     public GameFrame(GameController controller) {
         this.controller = controller;
@@ -24,8 +26,11 @@ public class GameFrame extends JFrame {
 
         this.setTitle("COGame - 《端脑》隔断棋盘博弈 (" + controller.getModeName() + ")");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setResizable(false);
-        this.add(canvas);
+        this.setResizable(true);
+        this.setMinimumSize(new Dimension(880, 620));
+        this.setPreferredSize(new Dimension(1100, 780));
+
+        this.add(canvas, BorderLayout.CENTER);
         this.pack();
         this.setLocationRelativeTo(null);
 
@@ -51,6 +56,8 @@ public class GameFrame extends JFrame {
                             canvas.toggleShowPath();
                     case KeyEvent.VK_ADD, KeyEvent.VK_EQUALS ->
                             controller.resetGame();
+                    case KeyEvent.VK_F11 ->
+                            toggleFullScreen();
                 }
             }
         });
@@ -62,6 +69,34 @@ public class GameFrame extends JFrame {
                 controller.close();
             }
         });
+    }
+
+    /**
+     * 切换自适应全屏模式
+     */
+    public void toggleFullScreen() {
+        GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+        dispose();
+        if (!isFullScreen) {
+            setUndecorated(true);
+            if (gd.isFullScreenSupported()) {
+                gd.setFullScreenWindow(this);
+            } else {
+                setExtendedState(JFrame.MAXIMIZED_BOTH);
+            }
+            isFullScreen = true;
+        } else {
+            if (gd.isFullScreenSupported()) {
+                gd.setFullScreenWindow(null);
+            }
+            setUndecorated(false);
+            setExtendedState(JFrame.NORMAL);
+            setSize(1100, 780);
+            setLocationRelativeTo(null);
+            isFullScreen = false;
+        }
+        setVisible(true);
+        requestFocusInWindow();
     }
 
     public void display() {

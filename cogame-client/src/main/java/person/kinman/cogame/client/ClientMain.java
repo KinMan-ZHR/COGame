@@ -28,13 +28,20 @@ public class ClientMain {
 
             if (args.length > 0) {
                 switch (args[0]) {
-                    case "--local" -> new GameFrame(new LocalController()).display();
-                    case "--ai" -> new GameFrame(new AiController()).display();
+                    case "--local" -> {
+                        int size = (args.length > 1) ? parseSize(args[1]) : 6;
+                        new GameFrame(new LocalController(size)).display();
+                    }
+                    case "--ai" -> {
+                        int size = (args.length > 1) ? parseSize(args[1]) : 6;
+                        new GameFrame(new AiController(size)).display();
+                    }
                     case "--online" -> {
                         String server = (args.length > 1) ? args[1] : "ws://127.0.0.1:8088";
                         String room = (args.length > 2) ? args[2] : "1001";
                         String name = (args.length > 3) ? args[3] : "Player";
-                        new GameFrame(new OnlineController(server, room, name)).display();
+                        int size = (args.length > 4) ? parseSize(args[4]) : 6;
+                        new GameFrame(new OnlineController(server, room, name, size)).display();
                     }
                     default -> new MainMenuFrame().setVisible(true);
                 }
@@ -42,5 +49,14 @@ public class ClientMain {
                 new MainMenuFrame().setVisible(true);
             }
         });
+    }
+
+    private static int parseSize(String arg) {
+        try {
+            int s = Integer.parseInt(arg.trim());
+            return Math.max(6, Math.min(13, s));
+        } catch (NumberFormatException e) {
+            return 6;
+        }
     }
 }
