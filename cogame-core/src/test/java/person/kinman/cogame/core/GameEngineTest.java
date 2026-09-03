@@ -174,17 +174,15 @@ public class GameEngineTest {
         // P1 used 0 steps, so retained 3 energy
         Assertions.assertEquals(3, state.getP1().getEnergy());
 
-        // P2's turn: initial 3 + 3 (capped at 5) = 5 energy
-        Assertions.assertEquals(5, state.getP2().getEnergy());
-        // P2 takes 1 step down and locks
+        // P2's first turn: 保持初始对称的 3 点能量（首回合不重复吃恢复）
+        Assertions.assertEquals(3, state.getP2().getEnergy());
+        // P2 移动 1 步并锁边 (消耗 1 步，保留 2 点能量)
         GameEngine.executeAction(state, 2, GameAction.changeDirMove(Direction.UP));
         GameEngine.executeAction(state, 2, GameAction.lock());
-        // P2 used 1 step, retained 4 energy
-        Assertions.assertEquals(4, state.getP2().getEnergy());
+        Assertions.assertEquals(2, state.getP2().getEnergy());
 
         // P1's turn: 3 retained + 3 regen = 6, capped at 5!
         Assertions.assertEquals(5, state.getP1().getEnergy());
-        // P1 now has 5 energy and can sprint up to 5 steps!
         Assertions.assertEquals(5, state.getRemainingSteps());
     }
 

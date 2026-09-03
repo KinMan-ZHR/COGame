@@ -74,6 +74,7 @@ public class GameState {
         this.p2Territory = 0;
         this.p1UnblockedEdges = 0;
         this.p2UnblockedEdges = 0;
+        this.p2FirstMove = true;
 
         // 中大盘进阶模式：初始化预置中立隔断墙 (6x6为0; 9x9为0.12; 12x12为0.16)
         double ratio = (rows >= 12) ? 0.16 : (rows >= 9 ? 0.12 : 0.0);
@@ -81,6 +82,8 @@ public class GameState {
             GameEvaluator.setupNeutralBarriers(this.board, ratio, System.currentTimeMillis());
         }
     }
+
+    private boolean p2FirstMove = true;
 
     public PlayerState getPlayer(int id) {
         return (id == 1) ? p1 : p2;
@@ -97,8 +100,12 @@ public class GameState {
     public void switchTurn() {
         this.currentTurn = (this.currentTurn == 1) ? 2 : 1;
         PlayerState curr = getCurrentPlayer();
-        // 获得恢复能量，但不超过上限
-        curr.setEnergy(Math.min(getMaxEnergy(), curr.getEnergy() + getEnergyRegen()));
+        // 确保双方首个行动回合都持有对称平等的开局能量，P2首次切回合不重复吃恢复
+        if (this.currentTurn == 2 && p2FirstMove) {
+            p2FirstMove = false;
+        } else {
+            curr.setEnergy(Math.min(getMaxEnergy(), curr.getEnergy() + getEnergyRegen()));
+        }
         this.turnStartR = curr.getR();
         this.turnStartC = curr.getC();
         this.currentTurnSteps = 0;
@@ -110,6 +117,7 @@ public class GameState {
         copy.p1 = this.p1.copy();
         copy.p2 = this.p2.copy();
         copy.currentTurn = this.currentTurn;
+        copy.p2FirstMove = this.p2FirstMove;
         copy.turnStartR = this.turnStartR;
         copy.turnStartC = this.turnStartC;
         copy.currentTurnSteps = this.currentTurnSteps;
