@@ -147,42 +147,97 @@ public class MainMenuFrame extends JFrame {
         String defaultNick = (profile.hasLoggedInOnline && profile.nickname != null && !"我".equals(profile.nickname))
                 ? profile.nickname : "玩家_" + (int) (Math.random() * 900 + 100);
 
+        JDialog loginDialog = new JDialog(this, "玩家前置登录与在线认证", true);
+        loginDialog.setSize(440, 290);
+        loginDialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(18, 22, 18, 22)
+        ));
+
+        JLabel l1 = new JLabel("对战服务器 WebSocket 地址:");
+        l1.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        l1.setForeground(DarkThemeHelper.COLOR_TEXT_PRIMARY);
+
         JTextField serverField = new JTextField(defaultServer);
-        JTextField nameField = new JTextField(defaultNick);
+        DarkThemeHelper.styleDarkTextField(serverField);
 
-        JPanel panel = new JPanel(new GridLayout(0, 1, 6, 6));
-        panel.add(new JLabel("对战服务器 WebSocket 地址:"));
-        panel.add(serverField);
-        JLabel hint = new JLabel("说明: 本机启动服务端填 ws://127.0.0.1:8088；远程对战请填服务器实际IP");
+        JLabel hint = new JLabel("说明: 本机测试填 ws://127.0.0.1:8088；远程对战请填实际IP");
         hint.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        hint.setForeground(new Color(148, 163, 184));
+        hint.setForeground(DarkThemeHelper.COLOR_TEXT_MUTED);
+
+        JLabel l2 = new JLabel("我的独立玩家昵称 (全服唯一):");
+        l2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        l2.setForeground(DarkThemeHelper.COLOR_TEXT_PRIMARY);
+
+        JTextField nameField = new JTextField(defaultNick);
+        DarkThemeHelper.styleDarkTextField(nameField);
+
+        panel.add(l1);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
+        panel.add(serverField);
+        panel.add(Box.createRigidArea(new Dimension(0, 2)));
         panel.add(hint);
-
-        panel.add(new JLabel("我的独立玩家昵称 (全服唯一):"));
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(l2);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(nameField);
+        panel.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "玩家前置登录与在线认证",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnPanel.setOpaque(false);
 
-        if (result == JOptionPane.OK_OPTION) {
+        DarkThemeHelper.DarkButton btnCancel = new DarkThemeHelper.DarkButton("取消",
+                new Color(51, 65, 85), new Color(71, 85, 105), DarkThemeHelper.COLOR_BORDER);
+        btnCancel.setPreferredSize(new Dimension(80, 34));
+        btnCancel.addActionListener(e -> loginDialog.dispose());
+
+        DarkThemeHelper.DarkButton btnLogin = new DarkThemeHelper.DarkButton("登录大厅",
+                new Color(109, 40, 217), new Color(124, 58, 237), DarkThemeHelper.COLOR_BORDER_FOCUS);
+        btnLogin.setPreferredSize(new Dimension(95, 34));
+        btnLogin.addActionListener(e -> {
             String server = serverField.getText().trim();
             String nickname = nameField.getText().trim();
 
             if (server.isEmpty() || nickname.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "服务器地址与昵称均不能为空！", "提示", JOptionPane.WARNING_MESSAGE);
+                showDarkMessageDialog("提示", "服务器地址与昵称均不能为空！");
                 return;
             }
 
+            loginDialog.dispose();
             performLogin(server, nickname);
-        }
+        });
+
+        btnPanel.add(btnCancel);
+        btnPanel.add(btnLogin);
+        panel.add(btnPanel);
+
+        loginDialog.add(panel);
+        loginDialog.setVisible(true);
     }
 
     private void performLogin(String serverUrl, String nickname) {
         JDialog waitDialog = new JDialog(this, "登录认证中", true);
-        waitDialog.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
-        waitDialog.add(new JLabel("正在连接服务器并校验唯一昵称，请稍候..."));
-        waitDialog.setSize(380, 110);
+        waitDialog.setSize(380, 120);
         waitDialog.setLocationRelativeTo(this);
+
+        JPanel wPanel = new JPanel(new BorderLayout());
+        wPanel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        wPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+
+        JLabel wLabel = new JLabel("正在连接服务器并校验唯一昵称，请稍候...");
+        wLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        wLabel.setForeground(DarkThemeHelper.COLOR_TEXT_PRIMARY);
+        wLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        wPanel.add(wLabel, BorderLayout.CENTER);
+        waitDialog.add(wPanel);
 
         final String[] loginError = {null};
         final boolean[] loginSuccess = {false};
@@ -247,15 +302,44 @@ public class MainMenuFrame extends JFrame {
         waitDialog.setVisible(true);
 
         if (loginSuccess[0]) {
-            // 登录成功，持久化本地配置（使得单机模式自动使用该昵称）
             ProfileManager.saveProfile(nickname, serverUrl);
             new OnlineLobbyFrame(serverUrl, nickname).setVisible(true);
         } else {
             String reason = (loginError[0] != null) ? loginError[0] : "连接被拒绝";
-            JOptionPane.showMessageDialog(this,
-                    "❌ 登录认证失败: " + reason + "\n\n排查建议：\n1. 若服务端运行在局域网/云服务器，请勿使用 127.0.0.1，请填写服务器实际 IP（如 172.16.24.127）\n2. 确保服务端的 8088 端口已被防火墙放行\n3. 若提示昵称已被占用，请更换独一无二的昵称",
-                    "连接与登录失败", JOptionPane.ERROR_MESSAGE);
+            showDarkMessageDialog("连接与登录失败",
+                    "❌ 登录认证失败: " + reason + "\n\n排查建议：\n1. 若服务端运行在局域网/云服务器，请勿使用 127.0.0.1，请填写服务器实际 IP（如 172.16.24.127）\n2. 确保服务端的 8088 端口已被放行\n3. 若提示昵称已被占用，请更换独一无二的昵称");
         }
+    }
+
+    private void showDarkMessageDialog(String title, String message) {
+        JDialog dialog = new JDialog(this, title, true);
+        dialog.setSize(440, 220);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
+        panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(20, 20, 16, 20)
+        ));
+
+        JLabel msgLabel = new JLabel("<html>" + message.replace("\n", "<br/>") + "</html>");
+        msgLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        msgLabel.setForeground(DarkThemeHelper.COLOR_TEXT_PRIMARY);
+        panel.add(msgLabel, BorderLayout.CENTER);
+
+        DarkThemeHelper.DarkButton btnOk = new DarkThemeHelper.DarkButton("确认",
+                new Color(2, 132, 199), new Color(14, 165, 233), DarkThemeHelper.COLOR_BORDER_FOCUS);
+        btnOk.setPreferredSize(new Dimension(90, 32));
+        btnOk.addActionListener(e -> dialog.dispose());
+
+        JPanel bPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bPanel.setOpaque(false);
+        bPanel.add(btnOk);
+        panel.add(bPanel, BorderLayout.SOUTH);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 
     private void styleDarkComboBox(JComboBox<String> combo) {

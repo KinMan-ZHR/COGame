@@ -7,7 +7,6 @@ import person.kinman.cogame.core.net.RoomSummaryDto;
 import person.kinman.cogame.core.net.WsMessage;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.net.URI;
@@ -15,7 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 联机对战大厅：房间列表浏览、密码保护、创建房间与快速随机匹配
+ * 联机对战大厅：
+ * 1. 彻底解决 Windows/Linux/macOS 平台原生组件发白、亮片不可读问题 (全量自绘制深色高对比组件)
+ * 2. 完善房主创建房间后「等待对手加入」的交互全流程 (RoomWaitingDialog)
+ * 3. 房间密码保护、大厅动态刷新与一键快速匹配
  */
 public class OnlineLobbyFrame extends JFrame {
     private final String serverUrl;
@@ -33,7 +35,7 @@ public class OnlineLobbyFrame extends JFrame {
 
         this.setTitle("COGame 联机对战大厅 - 玩家: " + playerName);
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(920, 600);
+        this.setSize(940, 600);
         this.setLocationRelativeTo(null);
 
         initUI();
@@ -41,8 +43,8 @@ public class OnlineLobbyFrame extends JFrame {
     }
 
     private void initUI() {
-        JPanel root = new JPanel(new BorderLayout(0, 10));
-        root.setBackground(new Color(15, 23, 42)); // 深夜蓝底色
+        JPanel root = new JPanel(new BorderLayout(0, 12));
+        root.setBackground(DarkThemeHelper.COLOR_BG_DARKEST);
         root.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         // 1. 顶部状态与信息栏
@@ -54,11 +56,11 @@ public class OnlineLobbyFrame extends JFrame {
 
         JLabel userBadge = new JLabel("👤 玩家: " + playerName);
         userBadge.setFont(new Font("SansSerif", Font.BOLD, 14));
-        userBadge.setForeground(new Color(56, 189, 248)); // 电光青
+        userBadge.setForeground(DarkThemeHelper.COLOR_BORDER_FOCUS);
 
         JLabel serverBadge = new JLabel("🌐 服务器: " + serverUrl);
         serverBadge.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        serverBadge.setForeground(new Color(148, 163, 184));
+        serverBadge.setForeground(DarkThemeHelper.COLOR_TEXT_MUTED);
 
         statusLabel = new JLabel("● 正在连接大厅...");
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -71,7 +73,11 @@ public class OnlineLobbyFrame extends JFrame {
         JPanel topActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 2));
         topActions.setOpaque(false);
 
-        JButton btnRefresh = createStyledButton("🔄 刷新大厅", new Color(30, 41, 59), new Color(51, 65, 85), Color.WHITE);
+        DarkThemeHelper.DarkButton btnRefresh = new DarkThemeHelper.DarkButton(
+                "🔄 刷新大厅",
+                new Color(30, 41, 59), new Color(51, 65, 85), DarkThemeHelper.COLOR_BORDER
+        );
+        btnRefresh.setPreferredSize(new Dimension(110, 32));
         btnRefresh.addActionListener(e -> requestRoomList());
         topActions.add(btnRefresh);
 
@@ -79,58 +85,54 @@ public class OnlineLobbyFrame extends JFrame {
         topBar.add(topActions, BorderLayout.EAST);
         root.add(topBar, BorderLayout.NORTH);
 
-        // 2. 中部：房间列表表格
+        // 2. 中部：高对比深色房间列表表格
         String[] columns = {"房间号", "房主", "棋盘规格", "人数", "密码保护", "对战状态", "快速操作"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // 只读
+                return false;
             }
         };
 
         roomTable = new JTable(tableModel);
-        roomTable.setRowHeight(36);
-        roomTable.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        roomTable.setBackground(new Color(30, 41, 59));
-        roomTable.setForeground(new Color(241, 245, 249));
-        roomTable.setSelectionBackground(new Color(2, 132, 199));
-        roomTable.setSelectionForeground(Color.WHITE);
-        roomTable.setGridColor(new Color(51, 65, 85));
-        roomTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
-        roomTable.getTableHeader().setBackground(new Color(21, 32, 54));
-        roomTable.getTableHeader().setForeground(new Color(226, 232, 240));
-        roomTable.getTableHeader().setReorderingAllowed(false);
-
-        // 居中渲染器
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        for (int i = 0; i < roomTable.getColumnCount(); i++) {
-            roomTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
-        }
+        DarkThemeHelper.styleDarkTable(roomTable);
 
         JScrollPane scrollPane = new JScrollPane(roomTable);
-        scrollPane.getViewport().setBackground(new Color(30, 41, 59));
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(51, 65, 85), 1));
+        scrollPane.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        scrollPane.getViewport().setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        scrollPane.setBorder(BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER, 1));
         root.add(scrollPane, BorderLayout.CENTER);
 
-        // 3. 底部操作按钮栏
+        // 3. 底部操作按钮栏 (采用全自绘高对比度 DarkButton，坚决杜绝亮片发白)
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 8));
         bottomBar.setOpaque(false);
 
-        JButton btnQuickMatch = createStyledButton("🎲 快速随机匹配", new Color(16, 185, 129), new Color(5, 150, 105), Color.WHITE);
-        btnQuickMatch.setFont(new Font("SansSerif", Font.BOLD, 13));
+        DarkThemeHelper.DarkButton btnQuickMatch = new DarkThemeHelper.DarkButton(
+                "🎲 快速随机匹配",
+                new Color(5, 150, 105), new Color(16, 185, 129), new Color(52, 211, 153)
+        );
+        btnQuickMatch.setPreferredSize(new Dimension(160, 40));
         btnQuickMatch.addActionListener(e -> handleRandomJoin());
 
-        JButton btnCreateRoom = createStyledButton("➕ 创建新房间", new Color(2, 132, 199), new Color(3, 105, 161), Color.WHITE);
-        btnCreateRoom.setFont(new Font("SansSerif", Font.BOLD, 13));
+        DarkThemeHelper.DarkButton btnCreateRoom = new DarkThemeHelper.DarkButton(
+                "➕ 创建新房间",
+                new Color(2, 132, 199), new Color(14, 165, 233), new Color(56, 189, 248)
+        );
+        btnCreateRoom.setPreferredSize(new Dimension(150, 40));
         btnCreateRoom.addActionListener(e -> showCreateRoomDialog());
 
-        JButton btnJoinSelected = createStyledButton("🔑 加入所选房间", new Color(124, 58, 237), new Color(109, 40, 217), Color.WHITE);
-        btnJoinSelected.setFont(new Font("SansSerif", Font.BOLD, 13));
+        DarkThemeHelper.DarkButton btnJoinSelected = new DarkThemeHelper.DarkButton(
+                "🔑 加入所选房间",
+                new Color(109, 40, 217), new Color(124, 58, 237), new Color(192, 132, 252)
+        );
+        btnJoinSelected.setPreferredSize(new Dimension(150, 40));
         btnJoinSelected.addActionListener(e -> handleJoinSelectedRoom());
 
-        JButton btnJoinById = createStyledButton("🔍 输入房号加入", new Color(71, 85, 105), new Color(51, 65, 85), Color.WHITE);
-        btnJoinById.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        DarkThemeHelper.DarkButton btnJoinById = new DarkThemeHelper.DarkButton(
+                "🔍 输入房号加入",
+                new Color(51, 65, 85), new Color(71, 85, 105), new Color(148, 163, 184)
+        );
+        btnJoinById.setPreferredSize(new Dimension(150, 40));
         btnJoinById.addActionListener(e -> showJoinByIdDialog());
 
         bottomBar.add(btnQuickMatch);
@@ -139,7 +141,6 @@ public class OnlineLobbyFrame extends JFrame {
         bottomBar.add(btnJoinById);
 
         root.add(bottomBar, BorderLayout.SOUTH);
-
         this.add(root);
     }
 
@@ -150,10 +151,9 @@ public class OnlineLobbyFrame extends JFrame {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
                     SwingUtilities.invokeLater(() -> {
-                        statusLabel.setText("● 大厅已连接");
-                        statusLabel.setForeground(new Color(34, 197, 94)); // 绿灯
+                        statusLabel.setText("● 大厅已连接 (在线)");
+                        statusLabel.setForeground(new Color(34, 197, 94));
                     });
-                    // 发送大厅列表拉取请求
                     send(WsMessage.listRooms().toJson());
                 }
 
@@ -170,15 +170,15 @@ public class OnlineLobbyFrame extends JFrame {
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
                     SwingUtilities.invokeLater(() -> {
-                        statusLabel.setText("● 已断开连接");
-                        statusLabel.setForeground(new Color(239, 68, 68)); // 红灯
+                        statusLabel.setText("● 大厅连接已断开");
+                        statusLabel.setForeground(new Color(239, 68, 68));
                     });
                 }
 
                 @Override
                 public void onError(Exception ex) {
                     SwingUtilities.invokeLater(() -> {
-                        statusLabel.setText("● 连接错误: " + ex.getMessage());
+                        statusLabel.setText("● 连接错误: " + (ex != null ? ex.getMessage() : "未知"));
                         statusLabel.setForeground(new Color(239, 68, 68));
                     });
                 }
@@ -205,7 +205,7 @@ public class OnlineLobbyFrame extends JFrame {
             for (RoomSummaryDto r : rooms) {
                 String lockText = r.isHasPassword() ? "🔒 需密码" : "🔓 公开";
                 String statusText = "WAITING".equals(r.getStatus()) ? "⏳ 等待对手 (1/2)" : "⚔️ 对战中 (2/2)";
-                String actionText = "WAITING".equals(r.getStatus()) ? (r.isHasPassword() ? "点击输入密码加入" : "点击直接加入") : "观战 (2.5版本)";
+                String actionText = "WAITING".equals(r.getStatus()) ? (r.isHasPassword() ? "密码加入" : "直接加入") : "对局中";
 
                 tableModel.addRow(new Object[]{
                         r.getRoomId(),
@@ -220,34 +220,81 @@ public class OnlineLobbyFrame extends JFrame {
         }
     }
 
+    /**
+     * 创建房间弹窗：全自绘深色，杜绝任何白底发白
+     */
     private void showCreateRoomDialog() {
+        JDialog dialog = new JDialog(this, "创建对战房间", true);
+        dialog.setSize(440, 360);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(20, 24, 20, 24)
+        ));
+
+        JLabel l1 = createDarkLabel("房间编号 (可自定义或保持随机):");
         JTextField roomIdField = new JTextField(String.valueOf((int) (Math.random() * 9000 + 1000)));
-        JPasswordField passwordField = new JPasswordField();
+        DarkThemeHelper.styleDarkTextField(roomIdField);
+
+        JLabel l2 = createDarkLabel("棋盘规格 (Board Size):");
         JComboBox<String> sizeBox = new JComboBox<>(new String[]{
-                "6 × 6 (经典原版)", "7 × 7 (战术进阶)", "8 × 8 (战略纵深)",
-                "9 × 9 (九宫迷阵)", "10 × 10 (双位矩阵)", "11 × 11 (广袤对决)",
-                "12 × 12 (宏大博弈)", "13 × 13 (终极拓扑)"
+                "6 × 6 (经典原版 - 36格)", "7 × 7 (战术进阶 - 49格)", "8 × 8 (战略纵深 - 64格)",
+                "9 × 9 (九宫迷阵 - 81格)", "10 × 10 (双位矩阵 - 100格)", "11 × 11 (广袤对决 - 121格)",
+                "12 × 12 (宏大博弈 - 144格)", "13 × 13 (终极拓扑 - 169格)"
         });
+        DarkThemeHelper.styleDarkComboBox(sizeBox);
 
-        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
-        panel.add(new JLabel("房间编号 (可自定义或保持随机):"));
+        JLabel l3 = createDarkLabel("房间密码 (可选，留空表示公开无密码):");
+        JPasswordField passwordField = new JPasswordField();
+        DarkThemeHelper.styleDarkPasswordField(passwordField);
+
+        panel.add(l1);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(roomIdField);
-        panel.add(new JLabel("棋盘规格:"));
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(l2);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(sizeBox);
-        panel.add(new JLabel("房间密码 (可选，留空表示公开房间):"));
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(l3);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(passwordField);
+        panel.add(Box.createRigidArea(new Dimension(0, 18)));
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "创建对战房间", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (res == JOptionPane.OK_OPTION) {
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        btnPanel.setOpaque(false);
+
+        DarkThemeHelper.DarkButton btnCancel = new DarkThemeHelper.DarkButton("取消",
+                new Color(51, 65, 85), new Color(71, 85, 105), DarkThemeHelper.COLOR_BORDER);
+        btnCancel.setPreferredSize(new Dimension(85, 34));
+        btnCancel.addActionListener(e -> dialog.dispose());
+
+        DarkThemeHelper.DarkButton btnConfirm = new DarkThemeHelper.DarkButton("立即创建",
+                new Color(2, 132, 199), new Color(14, 165, 233), DarkThemeHelper.COLOR_BORDER_FOCUS);
+        btnConfirm.setPreferredSize(new Dimension(100, 34));
+        btnConfirm.addActionListener(e -> {
             String roomId = roomIdField.getText().trim();
             if (roomId.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "房间号不能为空！", "提示", JOptionPane.WARNING_MESSAGE);
+                showDarkAlert("提示", "房间号不能为空！");
                 return;
             }
             int size = sizeBox.getSelectedIndex() + 6;
             String pwd = new String(passwordField.getPassword()).trim();
-            enterGameRoom(roomId, size, pwd.isEmpty() ? null : pwd);
-        }
+            dialog.dispose();
+            // 房主建房：isHost = true
+            enterGameRoom(roomId, size, pwd.isEmpty() ? null : pwd, true);
+        });
+
+        btnPanel.add(btnCancel);
+        btnPanel.add(btnConfirm);
+        panel.add(btnPanel);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 
     private void handleJoinSelectedRoom() {
@@ -259,81 +306,183 @@ public class OnlineLobbyFrame extends JFrame {
 
         RoomSummaryDto room = currentRooms.get(selectedRow);
         if ("PLAYING".equals(room.getStatus()) || room.getPlayerCount() >= 2) {
-            JOptionPane.showMessageDialog(this, "该房间正在激烈对战中！\n提示：实时观战系统将于 v2.5 版本正式开放！", "房间已满", JOptionPane.INFORMATION_MESSAGE);
+            showDarkAlert("房间已满", "该房间正在激烈对战中！\n提示：实时观战系统将于 v2.5 版本正式开放！");
             return;
         }
 
-        String pwd = null;
         if (room.isHasPassword()) {
-            JPasswordField pwdField = new JPasswordField();
-            int res = JOptionPane.showConfirmDialog(this, new Object[]{"该房间已设置密码，请输入：", pwdField},
-                    "输入房间密码", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-            if (res != JOptionPane.OK_OPTION) return;
-            pwd = new String(pwdField.getPassword()).trim();
+            showPasswordInputDialog(room.getRoomId(), room.getBoardSize());
+        } else {
+            enterGameRoom(room.getRoomId(), room.getBoardSize(), null, false);
         }
+    }
 
-        enterGameRoom(room.getRoomId(), room.getBoardSize(), pwd);
+    private void showPasswordInputDialog(String roomId, int boardSize) {
+        JDialog dialog = new JDialog(this, "输入房间密码", true);
+        dialog.setSize(380, 220);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(20, 24, 20, 24)
+        ));
+
+        JLabel l1 = createDarkLabel("该房间已上锁，请输入访问密码：");
+        JPasswordField pwdField = new JPasswordField();
+        DarkThemeHelper.styleDarkPasswordField(pwdField);
+
+        panel.add(l1);
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
+        panel.add(pwdField);
+        panel.add(Box.createRigidArea(new Dimension(0, 18)));
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnPanel.setOpaque(false);
+
+        DarkThemeHelper.DarkButton btnCancel = new DarkThemeHelper.DarkButton("取消",
+                new Color(51, 65, 85), new Color(71, 85, 105), DarkThemeHelper.COLOR_BORDER);
+        btnCancel.setPreferredSize(new Dimension(80, 32));
+        btnCancel.addActionListener(e -> dialog.dispose());
+
+        DarkThemeHelper.DarkButton btnJoin = new DarkThemeHelper.DarkButton("确认加入",
+                new Color(109, 40, 217), new Color(124, 58, 237), DarkThemeHelper.COLOR_BORDER_FOCUS);
+        btnJoin.setPreferredSize(new Dimension(95, 32));
+        btnJoin.addActionListener(e -> {
+            String pwd = new String(pwdField.getPassword()).trim();
+            dialog.dispose();
+            enterGameRoom(roomId, boardSize, pwd.isEmpty() ? null : pwd, false);
+        });
+
+        btnPanel.add(btnCancel);
+        btnPanel.add(btnJoin);
+        panel.add(btnPanel);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 
     private void showJoinByIdDialog() {
+        JDialog dialog = new JDialog(this, "精确输入房号加入", true);
+        dialog.setSize(400, 270);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(20, 24, 20, 24)
+        ));
+
+        JLabel l1 = createDarkLabel("请输入房间号:");
         JTextField roomIdField = new JTextField("1001");
-        JPasswordField passwordField = new JPasswordField();
+        DarkThemeHelper.styleDarkTextField(roomIdField);
 
-        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
-        panel.add(new JLabel("请输入房间号:"));
+        JLabel l2 = createDarkLabel("房间密码 (若房间无密码请留空):");
+        JPasswordField pwdField = new JPasswordField();
+        DarkThemeHelper.styleDarkPasswordField(pwdField);
+
+        panel.add(l1);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(roomIdField);
-        panel.add(new JLabel("房间密码 (若房间无密码请留空):"));
-        panel.add(passwordField);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(l2);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
+        panel.add(pwdField);
+        panel.add(Box.createRigidArea(new Dimension(0, 18)));
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "精确输入房号加入", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (res == JOptionPane.OK_OPTION) {
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnPanel.setOpaque(false);
+
+        DarkThemeHelper.DarkButton btnCancel = new DarkThemeHelper.DarkButton("取消",
+                new Color(51, 65, 85), new Color(71, 85, 105), DarkThemeHelper.COLOR_BORDER);
+        btnCancel.setPreferredSize(new Dimension(80, 32));
+        btnCancel.addActionListener(e -> dialog.dispose());
+
+        DarkThemeHelper.DarkButton btnJoin = new DarkThemeHelper.DarkButton("加入对局",
+                new Color(109, 40, 217), new Color(124, 58, 237), DarkThemeHelper.COLOR_BORDER_FOCUS);
+        btnJoin.setPreferredSize(new Dimension(95, 32));
+        btnJoin.addActionListener(e -> {
             String roomId = roomIdField.getText().trim();
             if (roomId.isEmpty()) return;
-            String pwd = new String(passwordField.getPassword()).trim();
-            enterGameRoom(roomId, 6, pwd.isEmpty() ? null : pwd);
-        }
+            String pwd = new String(pwdField.getPassword()).trim();
+            dialog.dispose();
+            enterGameRoom(roomId, 6, pwd.isEmpty() ? null : pwd, false);
+        });
+
+        btnPanel.add(btnCancel);
+        btnPanel.add(btnJoin);
+        panel.add(btnPanel);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 
     private void handleRandomJoin() {
-        // 寻找列表中第一个未满且无密码的房间
         for (RoomSummaryDto r : currentRooms) {
             if ("WAITING".equals(r.getStatus()) && !r.isHasPassword()) {
-                enterGameRoom(r.getRoomId(), r.getBoardSize(), null);
+                enterGameRoom(r.getRoomId(), r.getBoardSize(), null, false);
                 return;
             }
         }
-        // 若无现存，直接发起随机加入请求，服务端若也没有则提示创建
-        int opt = JOptionPane.showConfirmDialog(this,
-                "当前大厅暂无等待中的公开房间，是否立即创建一个新房间？",
-                "快速匹配提示", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (opt == JOptionPane.YES_OPTION) {
-            showCreateRoomDialog();
-        }
+        showCreateRoomDialog();
     }
 
-    private void enterGameRoom(String roomId, int boardSize, String password) {
-        // 关闭大厅专属 WebSocket 会话，释放资源
+    private void enterGameRoom(String roomId, int boardSize, String password, boolean isHost) {
         if (lobbyWsClient != null && lobbyWsClient.isOpen()) {
             lobbyWsClient.close();
         }
         this.dispose();
 
-        // 启动联机对战主窗口
         OnlineController controller = new OnlineController(serverUrl, roomId, playerName, boardSize, password);
-        new GameFrame(controller).display();
+        GameFrame gameFrame = new GameFrame(controller);
+        gameFrame.display();
+
+        // 如果是房主创建房间，立即弹出「等待对手加入」专属等待室
+        if (isHost) {
+            RoomWaitingDialog waitingDialog = new RoomWaitingDialog(gameFrame, controller, serverUrl, playerName);
+            waitingDialog.setVisible(true);
+        }
     }
 
-    private JButton createStyledButton(String text, Color bg, Color hoverBg, Color fg) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        btn.setBackground(bg);
-        btn.setForeground(fg);
-        btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(51, 65, 85), 1, true),
-                BorderFactory.createEmptyBorder(6, 14, 6, 14)
+    private JLabel createDarkLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        l.setForeground(DarkThemeHelper.COLOR_TEXT_PRIMARY);
+        return l;
+    }
+
+    private void showDarkAlert(String title, String message) {
+        JDialog dialog = new JDialog(this, title, true);
+        dialog.setSize(380, 180);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
+        panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
+                BorderFactory.createEmptyBorder(20, 20, 16, 20)
         ));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
+
+        JLabel msgLabel = new JLabel("<html>" + message.replace("\n", "<br/>") + "</html>");
+        msgLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        msgLabel.setForeground(DarkThemeHelper.COLOR_TEXT_PRIMARY);
+        panel.add(msgLabel, BorderLayout.CENTER);
+
+        DarkThemeHelper.DarkButton btnOk = new DarkThemeHelper.DarkButton("知道了",
+                new Color(2, 132, 199), new Color(14, 165, 233), DarkThemeHelper.COLOR_BORDER_FOCUS);
+        btnOk.setPreferredSize(new Dimension(90, 32));
+        btnOk.addActionListener(e -> dialog.dispose());
+
+        JPanel bPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bPanel.setOpaque(false);
+        bPanel.add(btnOk);
+        panel.add(bPanel, BorderLayout.SOUTH);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 }

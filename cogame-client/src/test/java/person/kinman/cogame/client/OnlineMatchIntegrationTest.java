@@ -164,6 +164,7 @@ public class OnlineMatchIntegrationTest {
 
         // P1 creates room with password "pass123"
         OnlineController p1 = new OnlineController(serverUrl, roomId, "P1Host", 8, "pass123");
+        Thread.sleep(250); // 确保房主已先建立房间
 
         // P2 tries to join with wrong password "wrong"
         CountDownLatch errorLatch = new CountDownLatch(1);

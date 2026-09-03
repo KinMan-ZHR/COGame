@@ -2,6 +2,7 @@ package person.kinman.cogame.client.ui;
 
 import person.kinman.cogame.client.audio.AudioPlayer;
 import person.kinman.cogame.client.controller.GameController;
+import person.kinman.cogame.client.controller.OnlineController;
 import person.kinman.cogame.core.model.Board;
 import person.kinman.cogame.core.model.Direction;
 import person.kinman.cogame.core.model.GameState;
@@ -196,6 +197,40 @@ public class GameCanvas extends JPanel {
 
         // 8. 绘制现代化高对比度侧边栏
         drawSidebar(g2, state, boardAreaWidth, 0, sidebarWidth, totalHeight);
+
+        // 9. 联机等待对手加入时的沉浸式提示蒙层
+        if (controller instanceof OnlineController oc && !oc.isGameStarted()) {
+            g2.setColor(new Color(11, 17, 32, 225));
+            g2.fillRect(0, 0, boardAreaWidth, totalHeight);
+
+            int panelW = Math.min(480, boardAreaWidth - 40);
+            int panelH = 150;
+            int panelX = (boardAreaWidth - panelW) / 2;
+            int panelY = (totalHeight - panelH) / 2;
+
+            g2.setColor(new Color(30, 41, 59));
+            g2.fill(new RoundRectangle2D.Float(panelX, panelY, panelW, panelH, 16, 16));
+            g2.setColor(new Color(56, 189, 248));
+            g2.setStroke(new BasicStroke(1.6f));
+            g2.draw(new RoundRectangle2D.Float(panelX, panelY, panelW, panelH, 16, 16));
+
+            g2.setFont(new Font("SansSerif", Font.BOLD, 20));
+            String waitTitle = "⏳ 正在等待对手加入房间 (1/2)...";
+            int tw = g2.getFontMetrics().stringWidth(waitTitle);
+            g2.drawString(waitTitle, panelX + (panelW - tw) / 2, panelY + 45);
+
+            g2.setColor(new Color(226, 232, 240));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            String rInfo = "房间编号: " + (oc.getRoomId() != null ? oc.getRoomId() : "---") + "   |   已就绪: 1/2";
+            int rw = g2.getFontMetrics().stringWidth(rInfo);
+            g2.drawString(rInfo, panelX + (panelW - rw) / 2, panelY + 85);
+
+            g2.setColor(new Color(148, 163, 184));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            String hint = "请将房间号告知对手，对手加入后将自动开局！";
+            int hw = g2.getFontMetrics().stringWidth(hint);
+            g2.drawString(hint, panelX + (panelW - hw) / 2, panelY + 120);
+        }
 
         g2.dispose();
     }

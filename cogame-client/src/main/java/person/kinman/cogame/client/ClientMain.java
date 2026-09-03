@@ -29,6 +29,21 @@ public class ClientMain {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception ignored) {}
 
+            UIManager.put("Panel.background", new Color(15, 23, 42));
+            UIManager.put("OptionPane.background", new Color(15, 23, 42));
+            UIManager.put("OptionPane.messageForeground", new Color(248, 250, 252));
+            UIManager.put("Label.foreground", new Color(248, 250, 252));
+            UIManager.put("TextField.background", new Color(30, 41, 59));
+            UIManager.put("TextField.foreground", new Color(248, 250, 252));
+            UIManager.put("TextField.caretForeground", new Color(56, 189, 248));
+            UIManager.put("PasswordField.background", new Color(30, 41, 59));
+            UIManager.put("PasswordField.foreground", new Color(248, 250, 252));
+            UIManager.put("Table.background", new Color(30, 41, 59));
+            UIManager.put("Table.foreground", new Color(248, 250, 252));
+            UIManager.put("Table.gridColor", new Color(51, 65, 85));
+            UIManager.put("TableHeader.background", new Color(21, 32, 54));
+            UIManager.put("TableHeader.foreground", new Color(56, 189, 248));
+
             if (args.length > 0) {
                 switch (args[0]) {
                     case "--local" -> {

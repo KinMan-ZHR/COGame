@@ -26,6 +26,8 @@ public class OnlineController implements GameController {
 
     private Consumer<GameState> onStateChanged;
     private Consumer<String> onNotification;
+    private Consumer<GameState> onGameStarted;
+    private Consumer<WsMessage> onRoomInfo;
 
     public OnlineController(String serverUrl, String roomId, String playerName) {
         this(serverUrl, roomId, playerName, 6, null);
@@ -79,6 +81,9 @@ public class OnlineController implements GameController {
                                     notifyState();
                                 }
                                 notifyMessage(msg.getMessage() != null ? msg.getMessage() : "等待其他玩家加入...");
+                                if (onRoomInfo != null) {
+                                    onRoomInfo.accept(msg);
+                                }
                             }
                             case WsMessage.TYPE_GAME_START -> {
                                 gameStarted = true;
@@ -91,6 +96,9 @@ public class OnlineController implements GameController {
                                 }
                                 notifyMessage("⚔️ 对手已就绪，对局开始！您是 " + (myPlayerId == 1 ? "先手(P1)" : "后手(P2)"));
                                 notifyState();
+                                if (onGameStarted != null) {
+                                    onGameStarted.accept(state);
+                                }
                             }
                             case WsMessage.TYPE_STATE_UPDATE -> {
                                 if (msg.getState() != null) {
@@ -203,6 +211,34 @@ public class OnlineController implements GameController {
     @Override
     public void setOnNotification(Consumer<String> listener) {
         this.onNotification = listener;
+    }
+
+    public String getServerUrl() {
+        return serverUrl;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public String getPlayerName() {
+        return playerName;
+    }
+
+    public int getBoardSize() {
+        return boardSize;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setOnGameStarted(Consumer<GameState> listener) {
+        this.onGameStarted = listener;
+    }
+
+    public void setOnRoomInfo(Consumer<WsMessage> listener) {
+        this.onRoomInfo = listener;
     }
 
     @Override
