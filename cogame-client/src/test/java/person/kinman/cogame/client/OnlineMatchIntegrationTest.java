@@ -285,4 +285,75 @@ public class OnlineMatchIntegrationTest {
         guest.close();
         server.stop();
     }
+
+    @Test
+    public void testInGameRematchWithTurnOrderArbitration() throws Exception {
+        int port;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            port = socket.getLocalPort();
+        }
+
+        CoGameWebSocketServer server = new CoGameWebSocketServer(port);
+        server.setReuseAddr(true);
+        server.start();
+        Thread.sleep(300);
+
+        String serverUrl = "ws://127.0.0.1:" + port;
+        String roomId = "in-game-rematch-" + System.currentTimeMillis();
+
+        // 局前进入房间 (无强制分先，默认 RANDOM)
+        OnlineController playerA = new OnlineController(serverUrl, roomId, "PlayerA");
+        Thread.sleep(150);
+        OnlineController playerB = new OnlineController(serverUrl, roomId, "PlayerB");
+
+        long deadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < deadline) {
+            if (playerA.isGameStarted() && playerB.isGameStarted()) break;
+            Thread.sleep(50);
+        }
+        Assertions.assertTrue(playerA.isGameStarted() && playerB.isGameStarted(), "初始局应成功开局");
+
+        // 模拟第1局走几步
+        OnlineController p1 = (playerA.getMyPlayerId() == 1) ? playerA : playerB;
+        p1.handleUserAction(GameAction.changeDirMove(Direction.DOWN));
+        Thread.sleep(100);
+
+        // 现在进行【局内分先发起新一局 (新一局自然要求分先)】：
+        // PlayerA 申请执后 (SECOND)，PlayerB 申请执先 (FIRST)
+        AtomicReference<String> newGameNoticeA = new AtomicReference<>();
+        AtomicReference<String> newGameNoticeB = new AtomicReference<>();
+        playerA.setOnNotification(newGameNoticeA::set);
+        playerB.setOnNotification(newGameNoticeB::set);
+
+        playerA.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.SECOND);
+        Thread.sleep(100);
+        playerB.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
+
+        // 等待新一局开始
+        Thread.sleep(500);
+
+        // 验证分先结果：PlayerB 应当为 P1 (先手)，PlayerA 应当为 P2 (后手)
+        Assertions.assertEquals(1, playerB.getMyPlayerId(), "局内选执先的 PlayerB 应当成为新局 P1");
+        Assertions.assertEquals(2, playerA.getMyPlayerId(), "局内选执后的 PlayerA 应当成为新局 P2");
+
+        // 验证棋盘已成功重置
+        Assertions.assertEquals(0, playerB.getGameState().getP1().getR(), "新一局 P1 应当在原点 (0,0)");
+        Assertions.assertEquals(0, playerB.getGameState().getP1().getC(), "新一局 P1 应当在原点 (0,0)");
+
+        // 再次测试：双方在局内均申请执先 (FIRST)
+        playerA.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
+        Thread.sleep(100);
+        playerB.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
+
+        Thread.sleep(500);
+
+        // 系统掷骰裁决：双方一人为1一人为2
+        Assertions.assertTrue((playerA.getMyPlayerId() == 1 && playerB.getMyPlayerId() == 2)
+                           || (playerA.getMyPlayerId() == 2 && playerB.getMyPlayerId() == 1),
+                "双方均选先手时，系统掷骰裁定应当有一人获得先手一人获得后手");
+
+        playerA.close();
+        playerB.close();
+        server.stop();
+    }
 }

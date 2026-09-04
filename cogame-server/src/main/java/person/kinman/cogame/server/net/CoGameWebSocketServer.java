@@ -140,6 +140,17 @@ public class CoGameWebSocketServer extends WebSocketServer {
                         room.setPlayerPreference(conn, msg.getTurnPreference());
                     }
                 }
+                case WsMessage.TYPE_REMATCH_REQUEST -> {
+                    GameRoom room = roomManager.getRoomByPlayer(conn);
+                    if (room == null && msg.getRoomId() != null) {
+                        room = roomManager.getRoom(msg.getRoomId());
+                    }
+                    if (room != null) {
+                        room.handleRematchRequest(conn, msg.getTurnPreference());
+                    } else {
+                        conn.send(WsMessage.error("未找到对应对战房间！").toJson());
+                    }
+                }
                 case WsMessage.TYPE_ACTION -> {
                     GameRoom room = roomManager.getRoomByPlayer(conn);
                     if (room != null && msg.getAction() != null) {

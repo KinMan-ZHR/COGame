@@ -16,6 +16,15 @@ public interface GameController {
     String getModeName();
     void setOnStateChanged(Consumer<GameState> listener);
     void setOnNotification(Consumer<String> listener);
+    default void resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference pref) {
+        resetGame();
+    }
+    default void swapTurnOrder() {
+        resetGame();
+    }
+    default person.kinman.cogame.core.model.TurnOrderPreference getCurrentPreference() {
+        return person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+    }
     default void start() {}
     void close();
 }

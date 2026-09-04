@@ -5,6 +5,8 @@ import person.kinman.cogame.core.model.GameState;
 import person.kinman.cogame.core.model.TurnOrderPreference;
 import person.kinman.cogame.core.rule.GameEngine;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -12,9 +14,9 @@ import java.util.function.Consumer;
  */
 public class LocalController implements GameController {
     private final GameState state;
-    private final TurnOrderPreference preference;
-    private Consumer<GameState> onStateChanged;
-    private Consumer<String> onNotification;
+    private TurnOrderPreference preference;
+    private final List<Consumer<GameState>> stateListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<String>> notificationListeners = new CopyOnWriteArrayList<>();
 
     public LocalController() {
         this(6, TurnOrderPreference.FIRST);
@@ -54,18 +56,48 @@ public class LocalController implements GameController {
         }
         int currentTurn = state.getCurrentTurn();
         boolean ok = GameEngine.executeAction(state, currentTurn, action);
-        if (ok && onStateChanged != null) {
-            onStateChanged.accept(state);
+        if (ok) {
+            notifyState();
+        }
+    }
+
+    private void notifyState() {
+        for (Consumer<GameState> l : stateListeners) {
+            try { l.accept(state); } catch (Exception ignored) {}
+        }
+    }
+
+    private void notifyNotification(String msg) {
+        for (Consumer<String> l : notificationListeners) {
+            try { l.accept(msg); } catch (Exception ignored) {}
         }
     }
 
     @Override
     public void resetGame() {
+        resetGameWithPreference(this.preference);
+    }
+
+    @Override
+    public void resetGameWithPreference(TurnOrderPreference pref) {
+        if (pref != null) {
+            this.preference = pref;
+        }
         state.reset();
         initPlayerNames();
-        if (onStateChanged != null) {
-            onStateChanged.accept(state);
-        }
+        notifyState();
+        notifyNotification("⚔️ 本地双人已开新局 (当前先手: " + state.getP1().getName() + ")");
+    }
+
+    @Override
+    public void swapTurnOrder() {
+        TurnOrderPreference newPref = (preference == TurnOrderPreference.FIRST) ? TurnOrderPreference.SECOND : TurnOrderPreference.FIRST;
+        resetGameWithPreference(newPref);
+    }
+
+    @Override
+    public TurnOrderPreference getCurrentPreference() {
+        return preference;
     }
 
     @Override
@@ -85,12 +117,16 @@ public class LocalController implements GameController {
 
     @Override
     public void setOnStateChanged(Consumer<GameState> listener) {
-        this.onStateChanged = listener;
+        if (listener != null) {
+            this.stateListeners.add(listener);
+        }
     }
 
     @Override
     public void setOnNotification(Consumer<String> listener) {
-        this.onNotification = listener;
+        if (listener != null) {
+            this.notificationListeners.add(listener);
+        }
     }
 
     @Override

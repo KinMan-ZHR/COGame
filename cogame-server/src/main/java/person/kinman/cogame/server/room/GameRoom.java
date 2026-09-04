@@ -25,6 +25,10 @@ public class GameRoom {
     private String p2Name = "玩家2";
     private person.kinman.cogame.core.model.TurnOrderPreference p1Preference = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
     private person.kinman.cogame.core.model.TurnOrderPreference p2Preference = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+    private boolean p1RematchReady = false;
+    private boolean p2RematchReady = false;
+    private person.kinman.cogame.core.model.TurnOrderPreference p1RematchPref = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+    private person.kinman.cogame.core.model.TurnOrderPreference p2RematchPref = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
     private final GameState state;
 
     // 预留 v2.5 观战者会话集合
@@ -166,15 +170,12 @@ public class GameRoom {
         }
 
         if (action.getType() == GameAction.Type.RESET) {
-            state.reset();
-            state.getP1().setName(p1Name);
-            state.getP2().setName(p2Name);
-            broadcast(WsMessage.stateUpdate(state));
+            handleRematchRequest(conn, "RANDOM");
             return;
         }
 
         if (state.isOver()) {
-            conn.send(WsMessage.error("对局已结束！").toJson());
+            conn.send(WsMessage.error("对局已结束，请点击【新一局】重新分先开战！").toJson());
             return;
         }
 
@@ -191,7 +192,89 @@ public class GameRoom {
         }
     }
 
+    public synchronized void handleRematchRequest(WebSocket conn, String turnPreferenceCode) {
+        int playerId = getPlayerId(conn);
+        if (playerId == 0) return;
+
+        person.kinman.cogame.core.model.TurnOrderPreference pref =
+                person.kinman.cogame.core.model.TurnOrderPreference.fromCode(turnPreferenceCode);
+        if (playerId == 1) {
+            p1RematchReady = true;
+            p1RematchPref = pref;
+            logger.info("房间 [{}] 玩家1 [{}] 准备新一局，分先意愿: {}", roomId, p1Name, pref.getDisplayName());
+        } else {
+            p2RematchReady = true;
+            p2RematchPref = pref;
+            logger.info("房间 [{}] 玩家2 [{}] 准备新一局，分先意愿: {}", roomId, p2Name, pref.getDisplayName());
+        }
+
+        // 如果只有一位玩家在房间内，直接重置
+        if (getPlayerCount() == 1) {
+            state.reset();
+            state.getP1().setName(p1Name);
+            p1RematchReady = false;
+            p2RematchReady = false;
+            broadcast(WsMessage.stateUpdate(state));
+            return;
+        }
+
+        // 双方均已就绪新一局，开始局内分先仲裁！
+        if (p1RematchReady && p2RematchReady) {
+            int chosenFirst = person.kinman.cogame.core.model.TurnOrderPreference.resolveFirstPlayer(
+                    p1RematchPref, p2RematchPref, new java.util.Random());
+            String desc = person.kinman.cogame.core.model.TurnOrderPreference.getResolutionDescription(
+                    p1Name, p1RematchPref, p2Name, p2RematchPref, chosenFirst);
+
+            if (chosenFirst == 2) {
+                // 原 P2 获胜执先，成为新局 P1
+                WebSocket tempConn = p1Conn;
+                String tempName = p1Name;
+
+                p1Conn = p2Conn;
+                p1Name = p2Name;
+                p1Preference = p2RematchPref;
+
+                p2Conn = tempConn;
+                p2Name = tempName;
+                p2Preference = p1RematchPref;
+            } else {
+                p1Preference = p1RematchPref;
+                p2Preference = p2RematchPref;
+            }
+
+            p1RematchReady = false;
+            p2RematchReady = false;
+
+            state.reset();
+            state.getP1().setName(p1Name);
+            state.getP2().setName(p2Name);
+
+            logger.info("房间 [{}] 新一局开战！分配结果: P1(先手)={}, P2(后手)={} [{}]", roomId, p1Name, p2Name, desc);
+
+            if (p1Conn != null && p1Conn.isOpen()) {
+                WsMessage startMsgP1 = WsMessage.gameStart(roomId, 1, state);
+                startMsgP1.setMessage("⚔️ 新一局开战！" + desc);
+                p1Conn.send(startMsgP1.toJson());
+            }
+
+            if (p2Conn != null && p2Conn.isOpen()) {
+                WsMessage startMsgP2 = WsMessage.gameStart(roomId, 2, state);
+                startMsgP2.setMessage("⚔️ 新一局开战！" + desc);
+                p2Conn.send(startMsgP2.toJson());
+            }
+
+            broadcastToSpectators(WsMessage.stateUpdate(state));
+        } else {
+            String readyPlayer = (playerId == 1) ? p1Name : p2Name;
+            String waitingMsg = "玩家 [" + readyPlayer + "] 已就绪新一局 (分先: " + pref.getDisplayName() + ")，等待对手就绪...";
+            WsMessage infoMsg = WsMessage.rematchInfo(waitingMsg);
+            broadcast(infoMsg);
+        }
+    }
+
     public synchronized void removePlayer(WebSocket conn) {
+        p1RematchReady = false;
+        p2RematchReady = false;
         if (conn == p1Conn) {
             logger.info("玩家1离开房间 [{}]", roomId);
             p1Conn = null;

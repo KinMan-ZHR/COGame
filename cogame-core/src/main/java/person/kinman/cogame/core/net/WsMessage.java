@@ -29,6 +29,8 @@ public class WsMessage {
     public static final String TYPE_ACTION = "ACTION";
     public static final String TYPE_STATE_UPDATE = "STATE_UPDATE";
     public static final String TYPE_GAME_OVER = "GAME_OVER";
+    public static final String TYPE_REMATCH_REQUEST = "REMATCH_REQUEST";
+    public static final String TYPE_REMATCH_INFO = "REMATCH_INFO";
     public static final String TYPE_PLAYER_LEFT = "PLAYER_LEFT";
     public static final String TYPE_ERROR = "ERROR";
 
@@ -158,6 +160,19 @@ public class WsMessage {
     public static WsMessage gameOver(GameState state) {
         WsMessage msg = new WsMessage(TYPE_GAME_OVER);
         msg.state = state;
+        return msg;
+    }
+
+    public static WsMessage rematchRequest(String roomId, String turnPreference) {
+        WsMessage msg = new WsMessage(TYPE_REMATCH_REQUEST);
+        msg.roomId = roomId;
+        msg.turnPreference = turnPreference;
+        return msg;
+    }
+
+    public static WsMessage rematchInfo(String message) {
+        WsMessage msg = new WsMessage(TYPE_REMATCH_INFO);
+        msg.message = message;
         return msg;
     }
 

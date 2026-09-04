@@ -109,31 +109,6 @@ public class OnlineLobbyFrame extends JFrame {
         bottomContainer.setLayout(new BoxLayout(bottomContainer, BoxLayout.Y_AXIS));
         bottomContainer.setOpaque(false);
 
-        JPanel prefBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 4));
-        prefBar.setOpaque(false);
-
-        JLabel prefLabel = new JLabel("🎯 我的分先意愿 (匹配与加入时生效):");
-        prefLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        prefLabel.setForeground(new Color(226, 232, 240));
-        prefBar.add(prefLabel);
-
-        JComboBox<String> lobbyPrefBox = new JComboBox<>(new String[]{
-                "🎲 随机分先 (双方同选先手则随机掷骰 · 推荐)",
-                "🔵 执先 (先手 P1 · 进击进攻)",
-                "🔴 执后 (后手 P2 · 稳守反击)"
-        });
-        DarkThemeHelper.styleDarkComboBox(lobbyPrefBox);
-        lobbyPrefBox.addActionListener(e -> {
-            lobbyTurnPreference = switch (lobbyPrefBox.getSelectedIndex()) {
-                case 1 -> person.kinman.cogame.core.model.TurnOrderPreference.FIRST;
-                case 2 -> person.kinman.cogame.core.model.TurnOrderPreference.SECOND;
-                default -> person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
-            };
-        });
-        prefBar.add(lobbyPrefBox);
-        bottomContainer.add(prefBar);
-        bottomContainer.add(Box.createRigidArea(new Dimension(0, 4)));
-
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 8));
         bottomBar.setOpaque(false);
 
@@ -256,7 +231,7 @@ public class OnlineLobbyFrame extends JFrame {
      */
     private void showCreateRoomDialog() {
         JDialog dialog = new JDialog(this, "创建对战房间", true);
-        dialog.setSize(440, 420);
+        dialog.setSize(420, 320);
         dialog.setLocationRelativeTo(this);
 
         JPanel panel = new JPanel();
@@ -283,17 +258,6 @@ public class OnlineLobbyFrame extends JFrame {
         JPasswordField passwordField = new JPasswordField();
         DarkThemeHelper.styleDarkPasswordField(passwordField);
 
-        JLabel l4 = createDarkLabel("分先意愿 (谁先手):");
-        JComboBox<String> turnBox = new JComboBox<>(new String[]{
-                "🎲 随机分先 (双方同选先手则随机掷骰 · 推荐)",
-                "🔵 执先 (先手 P1 · 进击进攻)",
-                "🔴 执后 (后手 P2 · 稳守反击)"
-        });
-        DarkThemeHelper.styleDarkComboBox(turnBox);
-        if (lobbyTurnPreference == person.kinman.cogame.core.model.TurnOrderPreference.FIRST) turnBox.setSelectedIndex(1);
-        else if (lobbyTurnPreference == person.kinman.cogame.core.model.TurnOrderPreference.SECOND) turnBox.setSelectedIndex(2);
-        else turnBox.setSelectedIndex(0);
-
         panel.add(l1);
         panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(roomIdField);
@@ -305,10 +269,6 @@ public class OnlineLobbyFrame extends JFrame {
         panel.add(l3);
         panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(passwordField);
-        panel.add(Box.createRigidArea(new Dimension(0, 8)));
-        panel.add(l4);
-        panel.add(Box.createRigidArea(new Dimension(0, 4)));
-        panel.add(turnBox);
         panel.add(Box.createRigidArea(new Dimension(0, 16)));
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
@@ -334,14 +294,9 @@ public class OnlineLobbyFrame extends JFrame {
                 default -> 6;
             };
             String pwd = new String(passwordField.getPassword()).trim();
-            person.kinman.cogame.core.model.TurnOrderPreference pref = switch (turnBox.getSelectedIndex()) {
-                case 1 -> person.kinman.cogame.core.model.TurnOrderPreference.FIRST;
-                case 2 -> person.kinman.cogame.core.model.TurnOrderPreference.SECOND;
-                default -> person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
-            };
             dialog.dispose();
             // 房主建房：isHost = true
-            enterGameRoom(roomId, size, pwd.isEmpty() ? null : pwd, true, pref);
+            enterGameRoom(roomId, size, pwd.isEmpty() ? null : pwd, true);
         });
 
         btnPanel.add(btnCancel);

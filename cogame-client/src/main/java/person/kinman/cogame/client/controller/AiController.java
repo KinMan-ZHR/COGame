@@ -8,6 +8,8 @@ import person.kinman.cogame.core.model.GameState;
 import person.kinman.cogame.core.model.TurnOrderPreference;
 import person.kinman.cogame.core.rule.GameEngine;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -19,13 +21,13 @@ public class AiController implements GameController {
     private final GameState state;
     private final AiStrategy aiStrategy;
     private final AiPlaystyle playstyle;
-    private final TurnOrderPreference preference;
-    private final int myPlayerId; // 1 (玩家先手 P1) 或 2 (玩家后手 P2)
-    private final int aiPlayerId; // 2 或 1
+    private TurnOrderPreference preference;
+    private int myPlayerId; // 1 (玩家先手 P1) 或 2 (玩家后手 P2)
+    private int aiPlayerId; // 2 或 1
     private final ExecutorService aiExecutor = Executors.newSingleThreadExecutor();
 
-    private Consumer<GameState> onStateChanged;
-    private Consumer<String> onNotification;
+    private final List<Consumer<GameState>> stateListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<String>> notificationListeners = new CopyOnWriteArrayList<>();
     private volatile boolean aiThinking = false;
 
     public AiController() {
@@ -114,9 +116,7 @@ public class AiController implements GameController {
 
     private void triggerAiTurn() {
         aiThinking = true;
-        if (onNotification != null) {
-            onNotification.accept(playstyle.getPlayerName() + " 正在深度思考连通策略...");
-        }
+        notifyNotification(playstyle.getPlayerName() + " 正在深度思考连通策略...");
 
         aiExecutor.submit(() -> {
             try {
@@ -129,9 +129,7 @@ public class AiController implements GameController {
                     notifyState();
                 }
 
-                if (onNotification != null) {
-                    onNotification.accept(playstyle.getPlayerName() + " 行动完毕: " + decision.getDescription());
-                }
+                notifyNotification(playstyle.getPlayerName() + " 行动完毕: " + decision.getDescription());
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -141,18 +139,54 @@ public class AiController implements GameController {
     }
 
     private void notifyState() {
-        if (onStateChanged != null) {
-            onStateChanged.accept(state);
+        for (Consumer<GameState> l : stateListeners) {
+            try { l.accept(state); } catch (Exception ignored) {}
+        }
+    }
+
+    private void notifyNotification(String msg) {
+        for (Consumer<String> l : notificationListeners) {
+            try { l.accept(msg); } catch (Exception ignored) {}
         }
     }
 
     @Override
     public void resetGame() {
+        resetGameWithPreference(this.preference);
+    }
+
+    @Override
+    public void resetGameWithPreference(TurnOrderPreference pref) {
+        if (pref != null) {
+            this.preference = pref;
+        }
+        int resolvedHuman = 1;
+        if (this.preference == TurnOrderPreference.SECOND) {
+            resolvedHuman = 2;
+        } else if (this.preference == TurnOrderPreference.RANDOM) {
+            resolvedHuman = new java.util.Random().nextBoolean() ? 1 : 2;
+        }
+        this.myPlayerId = resolvedHuman;
+        this.aiPlayerId = (myPlayerId == 1) ? 2 : 1;
+
         state.reset();
         initPlayerNames();
         aiThinking = false;
         notifyState();
+        String roleText = (myPlayerId == 1) ? "您执先手 (P1)" : playstyle.getPlayerName() + " 执先 (P1)";
+        notifyNotification("⚔️ 新一局开战！分先结果: " + roleText);
         checkAndTriggerAiFirstTurn();
+    }
+
+    @Override
+    public void swapTurnOrder() {
+        TurnOrderPreference newPref = (myPlayerId == 1) ? TurnOrderPreference.SECOND : TurnOrderPreference.FIRST;
+        resetGameWithPreference(newPref);
+    }
+
+    @Override
+    public TurnOrderPreference getCurrentPreference() {
+        return preference;
     }
 
     @Override
@@ -173,12 +207,16 @@ public class AiController implements GameController {
 
     @Override
     public void setOnStateChanged(Consumer<GameState> listener) {
-        this.onStateChanged = listener;
+        if (listener != null) {
+            this.stateListeners.add(listener);
+        }
     }
 
     @Override
     public void setOnNotification(Consumer<String> listener) {
-        this.onNotification = listener;
+        if (listener != null) {
+            this.notificationListeners.add(listener);
+        }
     }
 
     @Override

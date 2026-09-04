@@ -7,6 +7,8 @@ import person.kinman.cogame.core.model.GameState;
 import person.kinman.cogame.core.net.WsMessage;
 
 import java.net.URI;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -25,8 +27,8 @@ public class OnlineController implements GameController {
     private int myPlayerId = 0; // 等待服务端分配 (1 or 2)
     private boolean gameStarted = false;
 
-    private Consumer<GameState> onStateChanged;
-    private Consumer<String> onNotification;
+    private final List<Consumer<GameState>> stateListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<String>> notificationListeners = new CopyOnWriteArrayList<>();
     private Consumer<GameState> onGameStarted;
     private Consumer<WsMessage> onRoomInfo;
 
@@ -134,6 +136,11 @@ public class OnlineController implements GameController {
                                     notifyMessage("🏆 游戏结束！" + state.getWinReason());
                                 }
                             }
+                            case WsMessage.TYPE_REMATCH_INFO -> {
+                                if (msg.getMessage() != null) {
+                                    notifyMessage("🔔 " + msg.getMessage());
+                                }
+                            }
                             case WsMessage.TYPE_PLAYER_LEFT -> {
                                 notifyMessage("⚠️ 对手已离开房间！" + (msg.getMessage() != null ? msg.getMessage() : ""));
                             }
@@ -187,20 +194,44 @@ public class OnlineController implements GameController {
 
     @Override
     public void resetGame() {
-        if (wsClient != null && wsClient.isOpen()) {
+        resetGameWithPreference(this.turnPreference);
+    }
+
+    @Override
+    public void resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference pref) {
+        this.turnPreference = (pref != null) ? pref : person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+        if (wsClient != null && wsClient.isOpen() && roomId != null) {
+            wsClient.send(WsMessage.rematchRequest(roomId, this.turnPreference.getCode()).toJson());
+            notifyMessage("已向对手发送新一局分先请求 (" + this.turnPreference.getDisplayName() + ")，等待对手就绪...");
+        } else if (wsClient != null && wsClient.isOpen()) {
             wsClient.send(WsMessage.action(GameAction.reset()).toJson());
+        } else {
+            notifyMessage("未连接到服务器！");
         }
     }
 
+    @Override
+    public void swapTurnOrder() {
+        person.kinman.cogame.core.model.TurnOrderPreference newPref =
+                (myPlayerId == 1) ? person.kinman.cogame.core.model.TurnOrderPreference.SECOND
+                                  : person.kinman.cogame.core.model.TurnOrderPreference.FIRST;
+        resetGameWithPreference(newPref);
+    }
+
+    @Override
+    public person.kinman.cogame.core.model.TurnOrderPreference getCurrentPreference() {
+        return turnPreference;
+    }
+
     private void notifyState() {
-        if (onStateChanged != null) {
-            onStateChanged.accept(state);
+        for (Consumer<GameState> l : stateListeners) {
+            try { l.accept(state); } catch (Exception ignored) {}
         }
     }
 
     private void notifyMessage(String msg) {
-        if (onNotification != null) {
-            onNotification.accept(msg);
+        for (Consumer<String> l : notificationListeners) {
+            try { l.accept(msg); } catch (Exception ignored) {}
         }
     }
 
@@ -226,12 +257,16 @@ public class OnlineController implements GameController {
 
     @Override
     public void setOnStateChanged(Consumer<GameState> listener) {
-        this.onStateChanged = listener;
+        if (listener != null) {
+            this.stateListeners.add(listener);
+        }
     }
 
     @Override
     public void setOnNotification(Consumer<String> listener) {
-        this.onNotification = listener;
+        if (listener != null) {
+            this.notificationListeners.add(listener);
+        }
     }
 
     public String getServerUrl() {
