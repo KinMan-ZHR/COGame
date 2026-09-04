@@ -358,6 +358,9 @@ public class CoGameCli {
                 else if (state.getWinner() == 2) p2Wins++;
                 else draws++;
 
+                p1.onGameOver(state, 1);
+                p2.onGameOver(state, 2);
+
                 System.out.printf("  [局 %02d/%02d] 胜者: P%d (%s) | 领地: %d:%d | 回合: %d\n",
                         g, games, state.getWinner(),
                         (state.getWinner() == 1 ? p1.getName() : (state.getWinner() == 2 ? p2.getName() : "平局")),

@@ -63,7 +63,7 @@ public class LlmAgent implements PlayerAgent {
         return new LlmAgent(
                 "Codex-GPT5",
                 List.of(codexBin, "--ask-for-approval", "never", "exec", "-c",
-                        "model_reasoning_effort=\"medium\"", "--ignore-rules", "--sandbox",
+                        "model_reasoning_effort=\"low\"", "--ignore-rules", "--sandbox",
                         "danger-full-access", "--skip-git-repo-check", "-C", "/tmp"),
                 DEFAULT_TIMEOUT,
                 true,
@@ -126,13 +126,14 @@ public class LlmAgent implements PlayerAgent {
         List<String> cmd = new ArrayList<>();
         if (isCodex && sessionId != null) {
             // 同一局对战中：保持同一会话持续对话！
+            System.out.printf("🔄 [Codex] 恢复同一会话 (%s) 继续第 %d 回合思考...\n", sessionId, turnCounter);
             cmd.add(codexBin != null ? codexBin : "codex");
             cmd.add("--ask-for-approval");
             cmd.add("never");
             cmd.add("exec");
             cmd.add("resume");
             cmd.add("-c");
-            cmd.add("model_reasoning_effort=\"medium\"");
+            cmd.add("model_reasoning_effort=\"low\"");
             cmd.add("--dangerously-bypass-approvals-and-sandbox");
             cmd.add(sessionId);
             cmd.add("【第 " + turnCounter + " 回合】\n" + prompt);
