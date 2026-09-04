@@ -161,30 +161,36 @@ public class GameCanvas extends JPanel {
 
                 boolean isReachable = (reachableWithin3 != null && reachableWithin3.contains(GameEvaluator.encode(r, c)));
 
-                // 格子填充色（高对比度）
+                // 格子填充色（现代暗黑科技风）
                 if (inPath) {
                     g2.setColor(new Color(14, 116, 144)); // 连通路径高亮青蓝
                 } else if (r == state.getP1().getR() && c == state.getP1().getC()) {
-                    g2.setColor(new Color(8, 51, 68)); // P1所处位置光晕
+                    g2.setColor(new Color(8, 51, 68)); // P1 所在格微光
                 } else if (r == state.getP2().getR() && c == state.getP2().getC()) {
-                    g2.setColor(new Color(69, 26, 3)); // P2所处位置光晕
+                    g2.setColor(new Color(69, 26, 3)); // P2 所在格微光
                 } else if (isReachable) {
-                    g2.setColor(new Color(24, 45, 75)); // 当前回合3步可达范围柔和高亮
+                    g2.setColor(new Color(22, 42, 68)); // 当前回合可达范围柔和暗青
                 } else {
-                    g2.setColor(new Color(30, 41, 59)); // 默认深岩蓝格子
+                    g2.setColor(new Color(19, 28, 46)); // 默认深邃黑曜石格
                 }
                 g2.fillRect(cx, cy, cellSize, cellSize);
 
                 // 格子内部微弱网格分隔线
-                g2.setColor(new Color(51, 65, 85, 120));
+                g2.setColor(new Color(36, 48, 71, 100));
                 g2.setStroke(new BasicStroke(1));
                 g2.drawRect(cx, cy, cellSize, cellSize);
 
-                // 绘制高对比度格子编号
-                g2.setColor(new Color(148, 163, 184)); // 清晰亮灰字
-                g2.setFont(cellFont);
+                // 可达范围中心能量微光点
+                if (isReachable && !(r == state.getP1().getR() && c == state.getP1().getC()) && !(r == state.getP2().getR() && c == state.getP2().getC())) {
+                    g2.setColor(new Color(56, 189, 248, 90));
+                    g2.fillOval(cx + cellSize / 2 - 2, cy + cellSize / 2 - 2, 5, 5);
+                }
+
+                // 绘制低饱和度精致格子编号 (微弱暗灰字，彻底降噪)
+                g2.setColor(new Color(100, 116, 139, 85));
+                g2.setFont(new Font("Consolas", Font.PLAIN, Math.max(9, (int) (cellSize * 0.22))));
                 int cellIndex = r * cols + 1 + c;
-                g2.drawString(String.valueOf(cellIndex), cx + 6, cy + fontSize + 4);
+                g2.drawString(String.valueOf(cellIndex), cx + 5, cy + fontSize + 2);
             }
         }
 
@@ -207,8 +213,8 @@ public class GameCanvas extends JPanel {
         }
 
         // 7. 绘制玩家（带高对比光圈与高光三角朝向箭头）
-        drawPlayer(g2, state.getP1(), player1Img, new Color(6, 182, 212), "P1", startX, startY, cellSize);
-        drawPlayer(g2, state.getP2(), player2Img, new Color(245, 158, 11), "P2", startX, startY, cellSize);
+        drawPlayer(g2, state.getP1(), player1Img, new Color(6, 182, 212), "P1", startX, startY, cellSize, state.getCurrentTurn() == 1 && !state.isOver());
+        drawPlayer(g2, state.getP2(), player2Img, new Color(245, 158, 11), "P2", startX, startY, cellSize, state.getCurrentTurn() == 2 && !state.isOver());
 
         // 8. 绘制现代化高对比度侧边栏
         drawSidebar(g2, state, boardAreaWidth, 0, sidebarWidth, totalHeight);
@@ -257,35 +263,35 @@ public class GameCanvas extends JPanel {
             g2.drawLine(x1, y1, x2, y2);
         } else {
             if (open) {
-                // 畅通通道：清新翠绿细线，对比度明亮
-                g2.setColor(new Color(16, 185, 129, 210));
-                g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                // 畅通通道：柔和暗灰蓝纤细刻线，视觉深度下沉，让锁闭的激光壁障成为战场焦点
+                g2.setColor(new Color(36, 48, 71, 140));
+                g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.drawLine(x1, y1, x2, y2);
             } else {
-                // 已封锁边：根据玩家归属进行高对比区分
+                // 已封锁边：高饱和度激光能量力场壁障
                 Color glowColor;
                 Color coreColor;
                 if (locker == 1) {
-                    // P1 (先手) 锁边：电光亮青霓虹壁障
-                    glowColor = new Color(6, 182, 212, 110);
-                    coreColor = new Color(34, 211, 238);
+                    // P1 (先手) 锁边：电光亮青激光壁障
+                    glowColor = new Color(6, 182, 212, 130);
+                    coreColor = new Color(103, 232, 249);
                 } else if (locker == 2) {
-                    // P2 (后手/AI) 锁边：暖金琥珀/炽焰霓虹壁障
-                    glowColor = new Color(245, 158, 11, 110);
-                    coreColor = new Color(251, 191, 36);
+                    // P2 (后手/AI) 锁边：暖金琥珀激光壁障
+                    glowColor = new Color(245, 158, 11, 130);
+                    coreColor = new Color(253, 224, 71);
                 } else if (locker == 3) {
-                    // 中立预置阻隔墙：钛合金冷灰/玄武岩废墟
-                    glowColor = new Color(100, 116, 139, 90);
-                    coreColor = new Color(148, 163, 184);
+                    // 中立预置迷宫墙：钛合金冷灰壁障
+                    glowColor = new Color(100, 116, 139, 110);
+                    coreColor = new Color(203, 213, 225);
                 } else {
                     // 默认警告红
-                    glowColor = new Color(239, 68, 68, 100);
-                    coreColor = new Color(244, 63, 94);
+                    glowColor = new Color(239, 68, 68, 120);
+                    coreColor = new Color(252, 165, 165);
                 }
 
                 // 1. 发光辉光外层
                 g2.setColor(glowColor);
-                g2.setStroke(new BasicStroke(lockedWidth + 3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.setStroke(new BasicStroke(lockedWidth + 4.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.drawLine(x1, y1, x2, y2);
 
                 // 2. 核心鲜亮实体线
@@ -296,16 +302,21 @@ public class GameCanvas extends JPanel {
         }
     }
 
-    private void drawPlayer(Graphics2D g2, PlayerState player, Image img, Color accentColor, String tag, int startX, int startY, int cellSize) {
+    private void drawPlayer(Graphics2D g2, PlayerState player, Image img, Color accentColor, String tag, int startX, int startY, int cellSize, boolean isTurn) {
         int px = startX + player.getC() * cellSize;
         int py = startY + player.getR() * cellSize;
 
         int margin = Math.max(4, cellSize / 10);
         int avatarSize = cellSize - margin * 2;
 
-        // 玩家光圈底座
-        g2.setColor(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 60));
-        g2.fillOval(px + margin - 2, py + margin - 2, avatarSize + 4, avatarSize + 4);
+        // 行动方在格内有柔和呼吸光晕底座
+        if (isTurn) {
+            g2.setColor(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 75));
+            g2.fillOval(px + margin - 5, py + margin - 5, avatarSize + 10, avatarSize + 10);
+        } else {
+            g2.setColor(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 35));
+            g2.fillOval(px + margin - 2, py + margin - 2, avatarSize + 4, avatarSize + 4);
+        }
 
         // 头像绘制
         if (img != null) {
@@ -317,7 +328,7 @@ public class GameCanvas extends JPanel {
 
         // 外围高对比轮廓圆环
         g2.setColor(accentColor);
-        g2.setStroke(new BasicStroke(3.0f));
+        g2.setStroke(new BasicStroke(isTurn ? 3.0f : 2.0f));
         g2.drawOval(px + margin, py + margin, avatarSize, avatarSize);
 
         // 醒目的朝向指针（三角形箭头，指向边框方向）
@@ -367,158 +378,26 @@ public class GameCanvas extends JPanel {
 
     private void drawSidebar(Graphics2D g2, GameState state, int x, int y, int width, int height) {
         // 侧边栏背景
-        g2.setColor(new Color(17, 24, 39));
+        g2.setColor(new Color(15, 23, 42)); // 深邃黑曜石
         g2.fillRect(x, y, width, height);
-        g2.setColor(new Color(31, 41, 55));
+        g2.setColor(new Color(30, 41, 59));
         g2.setStroke(new BasicStroke(1.5f));
         g2.drawLine(x, y, x, y + height);
 
-        int pad = 20;
+        int pad = 16;
         int innerWidth = width - pad * 2;
-        int curY = y + 24;
+        int curY = y + 20;
 
-        // 顶部模式徽章
-        g2.setColor(new Color(30, 41, 59));
-        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 34, 10, 10));
-        g2.setColor(new Color(56, 189, 248));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        String titleStr = controller.getModeName() + " (" + state.getRows() + "×" + state.getCols() + ")";
-        g2.drawString(titleStr, x + pad + 12, curY + 22);
-        curY += 46;
+        // 面板 1：双雄对决一体化 HUD 卡片 (Versus Card)
+        curY = drawVersusHud(g2, state, x + pad, curY, innerWidth);
 
-        // 玩家 1 卡片 (先手 - 青色系)
-        int maxEnergy = state.getMaxEnergy();
-        int regen = state.getEnergyRegen();
+        // 面板 2：本回合战术行动 / 终局胜负卡片 (Tactical Action Card)
+        curY = drawTacticalCard(g2, state, x + pad, curY + 12, innerWidth);
 
-        drawPlayerCard(g2, x + pad, curY, innerWidth, state.getP1(), player1Img,
-                new Color(6, 182, 212), state.getCurrentTurn() == 1,
-                state.isOver() ? state.getP1Territory() : -1,
-                state.isOver() ? state.getP1UnblockedEdges() : -1, maxEnergy);
-        curY += 105;
+        // 面板 3：极简战局图例与快捷操作指南 (Compact Legend & Keybinds)
+        drawCompactGuide(g2, x + pad, curY + 12, innerWidth);
 
-        // 玩家 2 卡片 (后手 - 琥珀色系)
-        drawPlayerCard(g2, x + pad, curY, innerWidth, state.getP2(), player2Img,
-                new Color(245, 158, 11), state.getCurrentTurn() == 2,
-                state.isOver() ? state.getP2Territory() : -1,
-                state.isOver() ? state.getP2UnblockedEdges() : -1, maxEnergy);
-        curY += 112;
-
-        // 动态双能量池全景仪表盘 (同时呈现双方能量)
-        int energyCardH = 96;
-        g2.setColor(new Color(30, 41, 59));
-        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, energyCardH, 10, 10));
-        g2.setColor(new Color(56, 189, 248));
-        g2.setStroke(new BasicStroke(1.2f));
-        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, energyCardH, 10, 10));
-
-        PlayerState currP = state.getCurrentPlayer();
-        PlayerState p1 = state.getP1();
-        PlayerState p2 = state.getP2();
-        int currentSteps = state.getCurrentTurnSteps();
-
-        // 标题
-        g2.setColor(new Color(241, 245, 249));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-        String energyTitle = String.format("⚡ 双方能量池 (上限: %d | 每回合恢复: +%d)", maxEnergy, regen);
-        g2.drawString(energyTitle, x + pad + 12, curY + 18);
-
-        int dotCount = maxEnergy;
-        int dotSpacing = Math.min(15, Math.max(9, (innerWidth - 175) / Math.max(1, dotCount)));
-
-        // P1 行 (青色)
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
-        g2.setColor(new Color(6, 182, 212));
-        g2.drawString(String.format("P1(青) %-6s: %d/%d", abbreviateName(p1.getName(), 6), p1.getEnergy(), maxEnergy), x + pad + 12, curY + 41);
-        for (int i = 0; i < dotCount; i++) {
-            int dotX = x + pad + 165 + i * dotSpacing;
-            int dotY = curY + 31;
-            if (state.getCurrentTurn() == 1 && i < currentSteps) {
-                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗步数
-                g2.fillOval(dotX, dotY, 10, 10);
-            } else if (i < p1.getEnergy()) {
-                g2.setColor(new Color(6, 182, 212)); // 亮青色：P1 当前可用能量
-                g2.fillOval(dotX, dotY, 10, 10);
-            } else {
-                g2.setColor(new Color(71, 85, 105)); // 灰色圆环：空余容量
-                g2.drawOval(dotX, dotY, 10, 10);
-            }
-        }
-
-        // P2 行 (琥珀色)
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
-        g2.setColor(new Color(245, 158, 11));
-        g2.drawString(String.format("P2(金) %-6s: %d/%d", abbreviateName(p2.getName(), 6), p2.getEnergy(), maxEnergy), x + pad + 12, curY + 63);
-        for (int i = 0; i < dotCount; i++) {
-            int dotX = x + pad + 165 + i * dotSpacing;
-            int dotY = curY + 53;
-            if (state.getCurrentTurn() == 2 && i < currentSteps) {
-                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗步数
-                g2.fillOval(dotX, dotY, 10, 10);
-            } else if (i < p2.getEnergy()) {
-                g2.setColor(new Color(245, 158, 11)); // 琥珀色：P2 当前可用能量
-                g2.fillOval(dotX, dotY, 10, 10);
-            } else {
-                g2.setColor(new Color(71, 85, 105)); // 灰色圆环：空余容量
-                g2.drawOval(dotX, dotY, 10, 10);
-            }
-        }
-
-        // 底部行动状态提示 (不含玩家名，避免超出显示空间)
-        g2.setColor(new Color(226, 232, 240));
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.drawString("▶ 已走 " + currentSteps + " 步，剩余 " + state.getRemainingSteps() + " 步 | L键锁边交权", x + pad + 12, curY + 84);
-        curY += energyCardH + 14;
-
-        // 操作指南小卡片
-        g2.setColor(new Color(30, 41, 59));
-        int guideHeight = 190;
-        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, guideHeight, 12, 12));
-        g2.setColor(new Color(51, 65, 85));
-        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, guideHeight, 12, 12));
-
-        g2.setColor(new Color(241, 245, 249));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        g2.drawString("操作指南 & 边框图例", x + pad + 14, curY + 22);
-
-        // 边框图例展示
-        int legendY = curY + 40;
-        drawLegendBadge(g2, x + pad + 12, legendY, new Color(16, 185, 129), "通路");
-        drawLegendBadge(g2, x + pad + 82, legendY, new Color(34, 211, 238), "P1锁边");
-        drawLegendBadge(g2, x + pad + 158, legendY, new Color(251, 191, 36), "P2锁边");
-        drawLegendBadge(g2, x + pad + 234, legendY, new Color(148, 163, 184), "中立墙");
-
-        int lineY = curY + 65;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "WASD / 方向键", "移动并设定朝向"); lineY += 21;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "SPACE", "沿朝向前进一步"); lineY += 21;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "R 键", "顺时针旋转90°"); lineY += 21;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "L 键", "封锁边 (切回合)"); lineY += 21;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "P 键 / F11", "寻路高亮 / 全屏"); lineY += 21;
-        drawKeyGuideRow(g2, x + pad + 14, lineY, "+ 键", "重置棋局");
-        curY += guideHeight + 20;
-
-        // 游戏终局结算面板
-        if (state.isOver()) {
-            g2.setColor(new Color(239, 68, 68, 30));
-            g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 75, 12, 12));
-            g2.setColor(new Color(239, 68, 68));
-            g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 75, 12, 12));
-
-            g2.setColor(new Color(248, 113, 113));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 15));
-            String winnerText = (state.getWinner() == 3) ? "★ 双方战平！"
-                    : "★ " + state.getPlayer(state.getWinner()).getName() + " 获胜！";
-            g2.drawString(winnerText, x + pad + 16, curY + 28);
-
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-            g2.setColor(Color.WHITE);
-            String scoreText = String.format("领地: %d格 vs %d格 | 连通边: %d vs %d",
-                    state.getP1Territory(), state.getP2Territory(),
-                    state.getP1UnblockedEdges(), state.getP2UnblockedEdges());
-            g2.drawString(scoreText, x + pad + 16, curY + 54);
-            curY += 85;
-        }
-
-        // 底部通知栏
+        // 底部状态通知
         if (!statusNotification.isEmpty()) {
             g2.setColor(new Color(56, 189, 248));
             g2.setFont(new Font("SansSerif", Font.ITALIC, 12));
@@ -526,84 +405,220 @@ public class GameCanvas extends JPanel {
         }
     }
 
-    private void drawPlayerCard(Graphics2D g2, int cx, int cy, int cWidth, PlayerState player, Image avatar, Color accent, boolean isTurn, int territory, int edges, int maxEnergy) {
-        // 卡片底色
-        g2.setColor(isTurn ? new Color(30, 41, 59) : new Color(15, 23, 42));
-        g2.fill(new RoundRectangle2D.Float(cx, cy, cWidth, 90, 12, 12));
+    private int drawVersusHud(Graphics2D g2, GameState state, int x, int y, int w) {
+        int cardH = 196;
+        g2.setColor(new Color(21, 32, 54));
+        g2.fill(new RoundRectangle2D.Float(x, y, w, cardH, 14, 14));
+        g2.setColor(new Color(51, 65, 85));
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 14, 14));
 
-        // 轮到自己行动时的突出发光边框
+        // 头部标题条
+        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.setColor(new Color(148, 163, 184));
+        String modeText = controller.getModeName() + " (" + state.getRows() + "×" + state.getCols() + ")";
+        g2.drawString(modeText, x + 14, y + 22);
+
+        String regenText = "⚡ 回合恢复: +" + state.getEnergyRegen();
+        int rw = g2.getFontMetrics().stringWidth(regenText);
+        g2.setColor(new Color(56, 189, 248));
+        g2.drawString(regenText, x + w - rw - 14, y + 22);
+
+        // 分隔线
+        g2.setColor(new Color(30, 41, 59));
+        g2.drawLine(x + 10, y + 32, x + w - 10, y + 32);
+
+        int maxEnergy = state.getMaxEnergy();
+        boolean p1Turn = (state.getCurrentTurn() == 1 && !state.isOver());
+        boolean p2Turn = (state.getCurrentTurn() == 2 && !state.isOver());
+
+        // P1 玩家席位 (上部)
+        drawPlayerRow(g2, x + 12, y + 42, w - 24, state.getP1(), player1Img,
+                new Color(6, 182, 212), p1Turn, maxEnergy, state.getCurrentTurnSteps());
+
+        // 中间 VS 刻度徽章
+        int vsY = y + 114;
+        g2.setColor(new Color(30, 41, 59));
+        g2.drawLine(x + 14, vsY, x + w - 14, vsY);
+        g2.setColor(new Color(21, 32, 54));
+        g2.fillRoundRect(x + w / 2 - 20, vsY - 10, 40, 20, 6, 6);
+        g2.setColor(new Color(71, 85, 105));
+        g2.setFont(new Font("SansSerif", Font.BOLD, 10));
+        g2.drawString("VS", x + w / 2 - 7, vsY + 4);
+
+        // P2 玩家席位 (下部)
+        drawPlayerRow(g2, x + 12, y + 126, w - 24, state.getP2(), player2Img,
+                new Color(245, 158, 11), p2Turn, maxEnergy, state.getCurrentTurnSteps());
+
+        return y + cardH;
+    }
+
+    private void drawPlayerRow(Graphics2D g2, int rx, int ry, int rw, PlayerState player, Image avatar, Color accent, boolean isTurn, int maxEnergy, int currentSteps) {
+        int avSize = 44;
+
+        // 1. 头像区
         if (isTurn) {
-            g2.setColor(accent);
-            g2.setStroke(new BasicStroke(2.5f));
-            g2.draw(new RoundRectangle2D.Float(cx, cy, cWidth, 90, 12, 12));
-
-            // 行动中标签
-            g2.setColor(accent);
-            g2.fill(new RoundRectangle2D.Float(cx + cWidth - 75, cy + 8, 65, 20, 6, 6));
-            g2.setColor(Color.BLACK);
-            g2.setFont(new Font("SansSerif", Font.BOLD, 10));
-            g2.drawString("行动中 ▶", cx + cWidth - 68, cy + 22);
-        } else {
-            g2.setColor(new Color(51, 65, 85));
-            g2.setStroke(new BasicStroke(1.0f));
-            g2.draw(new RoundRectangle2D.Float(cx, cy, cWidth, 90, 12, 12));
+            // 行动方呼吸高光底盘
+            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 50));
+            g2.fillOval(rx - 2, ry - 2, avSize + 4, avSize + 4);
         }
 
-        // 头像
-        int avSize = 56;
         if (avatar != null) {
             Shape oldClip = g2.getClip();
-            g2.setClip(new java.awt.geom.Ellipse2D.Float(cx + 14, cy + 17, avSize, avSize));
-            g2.drawImage(avatar, cx + 14, cy + 17, avSize, avSize, null);
+            g2.setClip(new java.awt.geom.Ellipse2D.Float(rx, ry, avSize, avSize));
+            g2.drawImage(avatar, rx, ry, avSize, avSize, null);
             g2.setClip(oldClip);
         }
-        g2.setColor(accent);
-        g2.setStroke(new BasicStroke(2.0f));
-        g2.drawOval(cx + 14, cy + 17, avSize, avSize);
+        g2.setColor(isTurn ? accent : new Color(71, 85, 105));
+        g2.setStroke(new BasicStroke(isTurn ? 2.2f : 1.2f));
+        g2.drawOval(rx, ry, avSize, avSize);
 
-        // 昵称与身位
-        g2.setColor(new Color(248, 250, 252));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 15));
-        g2.drawString(player.getName(), cx + 80, cy + 30);
+        // 2. 姓名与状态徽章
+        int textX = rx + avSize + 12;
+        g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+        g2.setColor(isTurn ? accent : new Color(241, 245, 249));
+        g2.drawString(abbreviateName(player.getName(), 10), textX, ry + 18);
 
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        g2.setColor(new Color(148, 163, 184));
-        g2.drawString("身位: " + (player.getId() == 1 ? "先手 (P1)" : "后手 (P2)"), cx + 80, cy + 50);
-
-        // 玩家卡片内实时呈现自身能量
-        g2.setColor(accent);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-        g2.drawString("⚡ 能量: " + player.getEnergy() + " / " + maxEnergy, cx + 185, cy + 50);
-
-        g2.setColor(new Color(148, 163, 184));
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        g2.drawString("朝向: " + player.getDirection().getName() + " | 位置: (" + player.getR() + "," + player.getC() + ")", cx + 80, cy + 70);
-
-        // 若已终局显示领地
-        if (territory >= 0) {
+        // 状态徽章 (行动中 vs 等待)
+        if (isTurn) {
             g2.setColor(accent);
-            g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-            g2.drawString(territory + " 格 / " + edges + " 边", cx + cWidth - 85, cy + 70);
+            g2.fill(new RoundRectangle2D.Float(rx + rw - 60, ry + 3, 58, 18, 6, 6));
+            g2.setColor(new Color(15, 23, 42));
+            g2.setFont(new Font("SansSerif", Font.BOLD, 10));
+            g2.drawString("行动中 ▶", rx + rw - 54, ry + 16);
+        } else {
+            g2.setColor(new Color(51, 65, 85));
+            g2.fill(new RoundRectangle2D.Float(rx + rw - 48, ry + 3, 46, 18, 6, 6));
+            g2.setColor(new Color(148, 163, 184));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
+            g2.drawString("等待", rx + rw - 36, ry + 16);
+        }
+
+        // 3. 动态能量刻度槽 (Energy Meter)
+        int meterY = ry + 28;
+        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setColor(accent);
+        g2.drawString(String.format("⚡ %d/%d", player.getEnergy(), maxEnergy), textX, meterY + 11);
+
+        // 能量点阵 / 分段槽
+        int dotStartX = textX + 54;
+        int dotCount = maxEnergy;
+        int maxDotWidth = rw - (dotStartX - rx) - 6;
+        int dotSpacing = Math.min(13, Math.max(7, maxDotWidth / Math.max(1, dotCount)));
+
+        for (int i = 0; i < dotCount; i++) {
+            int dx = dotStartX + i * dotSpacing;
+            int dy = meterY + 3;
+            if (isTurn && i < currentSteps) {
+                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗步数
+                g2.fillOval(dx, dy, 8, 8);
+            } else if (i < player.getEnergy()) {
+                g2.setColor(accent); // 当前可用能量
+                g2.fillOval(dx, dy, 8, 8);
+            } else {
+                g2.setColor(new Color(51, 65, 85)); // 灰色容量槽
+                g2.drawOval(dx, dy, 8, 8);
+            }
         }
     }
 
-    private String abbreviateName(String name, int maxLen) {
-        if (name == null) return "";
-        if (name.length() <= maxLen) return name;
-        return name.substring(0, maxLen - 1) + "…";
+    private int drawTacticalCard(Graphics2D g2, GameState state, int x, int y, int w) {
+        if (state.isOver()) {
+            // 终局胜利卡片 (胜利荣耀红金霓虹)
+            int cardH = 78;
+            g2.setColor(new Color(69, 10, 10, 200));
+            g2.fill(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+            g2.setColor(new Color(239, 68, 68));
+            g2.setStroke(new BasicStroke(1.8f));
+            g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+
+            String winnerName = (state.getWinner() == 3) ? "双方平局！"
+                    : state.getPlayer(state.getWinner()).getName() + " 获得胜利！";
+            g2.setColor(new Color(254, 202, 202));
+            g2.setFont(new Font("SansSerif", Font.BOLD, 15));
+            g2.drawString("🏆 " + winnerName, x + 16, y + 28);
+
+            g2.setColor(new Color(226, 232, 240));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            String scoreStr = String.format("最终领地: %d格 vs %d格  |  连通边: %d vs %d",
+                    state.getP1Territory(), state.getP2Territory(),
+                    state.getP1UnblockedEdges(), state.getP2UnblockedEdges());
+            g2.drawString(scoreStr, x + 16, y + 54);
+
+            return y + cardH;
+        }
+
+        // 行动中：极简战术提示卡片
+        int cardH = 72;
+        PlayerState currP = state.getCurrentPlayer();
+        Color accent = (state.getCurrentTurn() == 1) ? new Color(6, 182, 212) : new Color(245, 158, 11);
+
+        g2.setColor(new Color(21, 32, 54));
+        g2.fill(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+        g2.setColor(accent);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+
+        // 第 1 行：行动者与步数
+        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+        g2.setColor(new Color(241, 245, 249));
+        int currentSteps = state.getCurrentTurnSteps();
+        int remaining = state.getRemainingSteps();
+        g2.drawString(String.format("▶ %s  已走 %d 步 · 剩余 %d 步", abbreviateName(currP.getName(), 8), currentSteps, remaining), x + 14, y + 26);
+
+        // 第 2 行：战术操作指令
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        if (remaining > 0) {
+            g2.setColor(new Color(148, 163, 184));
+            g2.drawString("💡 WASD 移动定位 · 按 L 键封锁朝向边交权", x + 14, y + 50);
+        } else {
+            g2.setColor(new Color(251, 146, 60));
+            g2.drawString("⚠️ 步数已耗尽，请按 L 键封锁朝向边交权", x + 14, y + 50);
+        }
+
+        return y + cardH;
     }
 
-    private void drawKeyGuideRow(Graphics2D g2, int x, int y, String key, String desc) {
+    private void drawCompactGuide(Graphics2D g2, int x, int y, int w) {
+        int cardH = 118;
+        g2.setColor(new Color(15, 23, 42));
+        g2.fill(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+        g2.setColor(new Color(40, 52, 75));
+        g2.setStroke(new BasicStroke(1.0f));
+        g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+
+        // 标题
+        g2.setColor(new Color(226, 232, 240));
+        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.drawString("战局图例 & 快捷操作", x + 14, y + 20);
+
+        // 图例色块
+        int legendY = y + 42;
+        drawLegendBadge(g2, x + 14, legendY, new Color(34, 211, 238), "P1壁障");
+        drawLegendBadge(g2, x + 84, legendY, new Color(251, 191, 36), "P2壁障");
+        drawLegendBadge(g2, x + 154, legendY, new Color(148, 163, 184), "迷宫墙");
+
+        // 快捷键指南
+        int keyY = y + 68;
+        drawKeyTag(g2, x + 14, keyY, "WASD", "移动定位");
+        drawKeyTag(g2, x + 120, keyY, "L 键", "锁边交权");
+
+        keyY += 24;
+        drawKeyTag(g2, x + 14, keyY, "P 键", "寻路高亮");
+        drawKeyTag(g2, x + 120, keyY, "F11", "全屏切换");
+        drawKeyTag(g2, x + 200, keyY, "+ 键", "重置");
+    }
+
+    private void drawKeyTag(Graphics2D g2, int x, int y, String key, String desc) {
         g2.setColor(new Color(2, 132, 199));
         g2.setFont(new Font("Consolas", Font.BOLD, 11));
-        g2.drawString(String.format("%-14s", key), x, y);
-        g2.setColor(new Color(203, 213, 225));
+        g2.drawString(key, x, y);
+        g2.setColor(new Color(148, 163, 184));
         g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.drawString(desc, x + 105, y);
+        g2.drawString(desc, x + g2.getFontMetrics(new Font("Consolas", Font.BOLD, 11)).stringWidth(key) + 6, y);
     }
 
     private void drawLegendBadge(Graphics2D g2, int x, int y, Color color, String label) {
-        // 绘制小样色条
         g2.setColor(color);
         g2.setStroke(new BasicStroke(3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g2.drawLine(x, y - 4, x + 16, y - 4);
@@ -611,5 +626,11 @@ public class GameCanvas extends JPanel {
         g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
         g2.setColor(new Color(203, 213, 225));
         g2.drawString(label, x + 22, y);
+    }
+
+    private String abbreviateName(String name, int maxLen) {
+        if (name == null) return "";
+        if (name.length() <= maxLen) return name;
+        return name.substring(0, maxLen - 1) + "…";
     }
 }
