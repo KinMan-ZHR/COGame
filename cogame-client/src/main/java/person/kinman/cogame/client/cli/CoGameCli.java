@@ -48,10 +48,40 @@ public class CoGameCli {
             case "play" -> runPlayCommand(subArgs);
             case "online" -> runOnlineCommand(subArgs);
             case "bench" -> runBenchCommand(subArgs);
+            case "step" -> runStepCommand(subArgs);
             default -> {
                 System.err.println("未知子命令: " + subcmd + "，请参阅 --help");
                 printRootHelp();
             }
+        }
+    }
+
+    private static void runStepCommand(String[] args) throws Exception {
+        if (args.length == 0) {
+            System.out.println("用法: cogame step <start|move> [选项]");
+            return;
+        }
+        String action = args[0].toLowerCase();
+        String file = "/tmp/cogame_step.json";
+        int size = 6;
+        String engine = "antigravity";
+        int choice = 0;
+
+        for (int i = 1; i < args.length; i++) {
+            switch (args[i]) {
+                case "--file", "-f" -> { if (i + 1 < args.length) file = args[++i]; }
+                case "--size", "-s" -> { if (i + 1 < args.length) size = Integer.parseInt(args[++i]); }
+                case "--engine", "-e" -> { if (i + 1 < args.length) engine = args[++i]; }
+                case "--choice", "-c" -> { if (i + 1 < args.length) choice = Integer.parseInt(args[++i]); }
+            }
+        }
+
+        if (action.equals("start")) {
+            StepBattle.start(size, engine, file);
+        } else if (action.equals("move")) {
+            StepBattle.move(file, choice);
+        } else {
+            System.err.println("未知 step 动作: " + action + " (支持 start 或 move)");
         }
     }
 

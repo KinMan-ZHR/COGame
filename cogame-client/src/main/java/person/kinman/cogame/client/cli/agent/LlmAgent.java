@@ -21,23 +21,33 @@ import java.util.regex.Pattern;
  */
 public class LlmAgent implements PlayerAgent {
 
-    private static final Pattern CHOICE_PATTERN = Pattern.compile("\\\"choice\\\"\\s*:\\s*(-?\\d+)");
-    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
+    private static final Pattern CHOICE_PATTERN = Pattern.compile("(?i)\\\"?choice\\\"?\\s*:\\s*(-?\\d+)");
+    private static final Pattern SESSION_ID_PATTERN = Pattern.compile("(?i)session\\s+id:\\s*([0-9a-f-]{36})");
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(120);
 
     private final String name;
     private final List<String> commandPrefix;
     private final Duration timeout;
+    private final boolean isCodex;
+    private final String codexBin;
     private final List<String> history = new ArrayList<>();
     private int turnCounter = 0;
+    private String sessionId = null;
 
     public LlmAgent(String name, List<String> commandPrefix) {
-        this(name, commandPrefix, DEFAULT_TIMEOUT);
+        this(name, commandPrefix, DEFAULT_TIMEOUT, false, null);
     }
 
     public LlmAgent(String name, List<String> commandPrefix, Duration timeout) {
+        this(name, commandPrefix, timeout, false, null);
+    }
+
+    public LlmAgent(String name, List<String> commandPrefix, Duration timeout, boolean isCodex, String codexBin) {
         this.name = Objects.requireNonNull(name, "name");
         this.commandPrefix = List.copyOf(commandPrefix);
         this.timeout = (timeout != null) ? timeout : DEFAULT_TIMEOUT;
+        this.isCodex = isCodex;
+        this.codexBin = codexBin;
     }
 
     public static LlmAgent gemini() {
@@ -48,11 +58,16 @@ public class LlmAgent implements PlayerAgent {
     }
 
     public static LlmAgent codex() {
+        String codexBin = java.nio.file.Files.isExecutable(java.nio.file.Path.of("/home/kinman/.local/bin/codex"))
+                ? "/home/kinman/.local/bin/codex" : "codex";
         return new LlmAgent(
                 "Codex-GPT5",
-                List.of("codex", "--ask-for-approval", "never", "exec", "-c",
-                        "model_reasoning_effort=\"high\"", "--ignore-rules", "--ephemeral", "--sandbox",
-                        "danger-full-access", "--skip-git-repo-check", "-C", "/tmp")
+                List.of(codexBin, "--ask-for-approval", "never", "exec", "-c",
+                        "model_reasoning_effort=\"medium\"", "--ignore-rules", "--sandbox",
+                        "danger-full-access", "--skip-git-repo-check", "-C", "/tmp"),
+                DEFAULT_TIMEOUT,
+                true,
+                codexBin
         );
     }
 
@@ -108,8 +123,24 @@ public class LlmAgent implements PlayerAgent {
     }
 
     private int invokeModel(String prompt) throws IOException, InterruptedException {
-        List<String> cmd = new ArrayList<>(commandPrefix);
-        cmd.add(prompt);
+        List<String> cmd = new ArrayList<>();
+        if (isCodex && sessionId != null) {
+            // 同一局对战中：保持同一会话持续对话！
+            cmd.add(codexBin != null ? codexBin : "codex");
+            cmd.add("--ask-for-approval");
+            cmd.add("never");
+            cmd.add("exec");
+            cmd.add("resume");
+            cmd.add("-c");
+            cmd.add("model_reasoning_effort=\"medium\"");
+            cmd.add("--dangerously-bypass-approvals-and-sandbox");
+            cmd.add(sessionId);
+            cmd.add("【第 " + turnCounter + " 回合】\n" + prompt);
+        } else {
+            // 新对局首回合：开启新对话
+            cmd.addAll(commandPrefix);
+            cmd.add(prompt);
+        }
 
         Process process = new ProcessBuilder(cmd)
                 .redirectErrorStream(true)
@@ -133,6 +164,16 @@ public class LlmAgent implements PlayerAgent {
 
         reader.join(2000);
         String response = output.toString(StandardCharsets.UTF_8);
+
+        // 若是新会话首回合，捕获 session id 供后序回合复用
+        if (isCodex && sessionId == null) {
+            Matcher sMatcher = SESSION_ID_PATTERN.matcher(response);
+            if (sMatcher.find()) {
+                this.sessionId = sMatcher.group(1);
+                System.out.printf("🔗 [Codex] 已锁定对局会话句柄: %s (本局全程保持单会话记忆)\n", sessionId);
+            }
+        }
+
         return parseChoice(response);
     }
 
@@ -146,5 +187,20 @@ public class LlmAgent implements PlayerAgent {
             throw new IOException("模型输出未找到 JSON choice: " + response.substring(Math.max(0, response.length() - 200)));
         }
         return lastChoice;
+    }
+
+    @Override
+    public void onGameOver(GameState state, int myPlayerId) {
+        if (this.sessionId != null) {
+            System.out.printf("🏁 [Codex] 对局结束，释放对局会话 %s (下局将开辟新会话)\n", sessionId);
+            this.sessionId = null;
+        }
+        this.turnCounter = 0;
+        this.history.clear();
+    }
+
+    @Override
+    public void close() {
+        this.sessionId = null;
     }
 }

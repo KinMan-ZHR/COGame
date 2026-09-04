@@ -74,6 +74,11 @@ public class ExternalCmdAgent implements PlayerAgent {
             cm.put("outcome", c.outcome().name());
             cm.put("myTerritory", c.myTerritory());
             cm.put("oppTerritory", c.opponentTerritory());
+            cm.put("distance", c.distance());
+            cm.put("myEdges", c.myEdges());
+            cm.put("oppEdges", c.opponentEdges());
+            cm.put("myDegree", c.myDegree());
+            cm.put("oppDegree", c.opponentDegree());
             candidateList.add(cm);
         }
         payload.put("candidates", candidateList);
