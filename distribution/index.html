@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COGame - 《端脑》隔断棋盘博弈客户端分发中心 (v2.3.0)</title>
+    <title>COGame - 《端脑》隔断棋盘博弈客户端分发中心 (v2.5.0)</title>
     <style>
         :root {
             --bg-color: #0b1120;
@@ -340,6 +340,10 @@
                     <h3>📁 完整棋谱录像与毫秒级遥测</h3>
                     <p>支持 <code>--record replay.json</code> 自动沉淀每回合毫秒时延、位移路径与胜负拓扑，直接作为强化学习与大模型微调的优质数据集！</p>
                 </div>
+                <div class="feature-item">
+                    <h3>🎲 自由分先与公平先手仲裁</h3>
+                    <p>人机模式支持自由指定玩家执先 (P1) 或 AI 率先出招 (P2)，验证小盘先手必胜假说；联机大厅支持设置分先意愿，<strong>若双方均选先手则由服务端 50/50 掷骰公平裁定</strong>！</p>
+                </div>
             </div>
         </div>
 
@@ -426,7 +430,8 @@
                     <li><strong>优化侧边栏行动提示排版</strong>：去除冗余当前玩家前缀，确保各分辨率下信息完整居中，绝不溢出；</li>
                     <li><strong>真实大模型连续会话记忆</strong>：局内全程使用单会话（<code>session id</code>）记忆推理，终局自动释放注销，新局独立开启全新对话；</li>
                     <li><strong>开放式 Stdio JSON 协议</strong>：任何语言（Python/C++/Rust）编写的外部 Bot 均可 5 行接入打天梯；</li>
-                    <li><strong>全自动棋谱录像</strong>：支持 <code>--record replay.json</code> 导出每步毫秒时延、位移与胜负拓扑数据。</li>
+                    <li><strong>全自动棋谱录像</strong>：支持 <code>--record replay.json</code> 导出每步毫秒时延、位移与胜负拓扑数据；</li>
+                    <li><strong>自由分先与公平先手仲裁机制</strong>：人机对战自由指定玩家执先 (P1) 或 AI 率先出招 (P2)，验证小盘先手必胜假说；联机大厅与建房支持设置分先意愿，<strong>若双方均选先手则由服务端 50/50 掷骰公平裁定</strong>。</li>
                 </ul>
             </div>
             <div class="changelog-item">

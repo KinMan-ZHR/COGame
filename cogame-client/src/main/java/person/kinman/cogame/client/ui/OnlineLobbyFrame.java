@@ -28,6 +28,7 @@ public class OnlineLobbyFrame extends JFrame {
     private JLabel statusLabel;
     private WebSocketClient lobbyWsClient;
     private final List<RoomSummaryDto> currentRooms = new ArrayList<>();
+    private person.kinman.cogame.core.model.TurnOrderPreference lobbyTurnPreference = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
 
     public OnlineLobbyFrame(String serverUrl, String playerName) {
         this.serverUrl = serverUrl;
@@ -35,7 +36,7 @@ public class OnlineLobbyFrame extends JFrame {
 
         this.setTitle("COGame 联机对战大厅 - 玩家: " + playerName);
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(940, 600);
+        this.setSize(940, 620);
         this.setLocationRelativeTo(null);
 
         initUI();
@@ -103,7 +104,36 @@ public class OnlineLobbyFrame extends JFrame {
         scrollPane.setBorder(BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER, 1));
         root.add(scrollPane, BorderLayout.CENTER);
 
-        // 3. 底部操作按钮栏 (采用全自绘高对比度 DarkButton，坚决杜绝亮片发白)
+        // 3. 底部操作按钮栏与分先偏好栏 (全自绘高对比度，杜绝亮片发白)
+        JPanel bottomContainer = new JPanel();
+        bottomContainer.setLayout(new BoxLayout(bottomContainer, BoxLayout.Y_AXIS));
+        bottomContainer.setOpaque(false);
+
+        JPanel prefBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 4));
+        prefBar.setOpaque(false);
+
+        JLabel prefLabel = new JLabel("🎯 我的分先意愿 (匹配与加入时生效):");
+        prefLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        prefLabel.setForeground(new Color(226, 232, 240));
+        prefBar.add(prefLabel);
+
+        JComboBox<String> lobbyPrefBox = new JComboBox<>(new String[]{
+                "🎲 随机分先 (双方同选先手则随机掷骰 · 推荐)",
+                "🔵 执先 (先手 P1 · 进击进攻)",
+                "🔴 执后 (后手 P2 · 稳守反击)"
+        });
+        DarkThemeHelper.styleDarkComboBox(lobbyPrefBox);
+        lobbyPrefBox.addActionListener(e -> {
+            lobbyTurnPreference = switch (lobbyPrefBox.getSelectedIndex()) {
+                case 1 -> person.kinman.cogame.core.model.TurnOrderPreference.FIRST;
+                case 2 -> person.kinman.cogame.core.model.TurnOrderPreference.SECOND;
+                default -> person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+            };
+        });
+        prefBar.add(lobbyPrefBox);
+        bottomContainer.add(prefBar);
+        bottomContainer.add(Box.createRigidArea(new Dimension(0, 4)));
+
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 8));
         bottomBar.setOpaque(false);
 
@@ -140,7 +170,8 @@ public class OnlineLobbyFrame extends JFrame {
         bottomBar.add(btnJoinSelected);
         bottomBar.add(btnJoinById);
 
-        root.add(bottomBar, BorderLayout.SOUTH);
+        bottomContainer.add(bottomBar);
+        root.add(bottomContainer, BorderLayout.SOUTH);
         this.add(root);
     }
 
@@ -225,7 +256,7 @@ public class OnlineLobbyFrame extends JFrame {
      */
     private void showCreateRoomDialog() {
         JDialog dialog = new JDialog(this, "创建对战房间", true);
-        dialog.setSize(440, 360);
+        dialog.setSize(440, 420);
         dialog.setLocationRelativeTo(this);
 
         JPanel panel = new JPanel();
@@ -233,7 +264,7 @@ public class OnlineLobbyFrame extends JFrame {
         panel.setBackground(DarkThemeHelper.COLOR_BG_PANEL);
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 1),
-                BorderFactory.createEmptyBorder(20, 24, 20, 24)
+                BorderFactory.createEmptyBorder(18, 22, 18, 22)
         ));
 
         JLabel l1 = createDarkLabel("房间编号 (可自定义或保持随机):");
@@ -252,18 +283,33 @@ public class OnlineLobbyFrame extends JFrame {
         JPasswordField passwordField = new JPasswordField();
         DarkThemeHelper.styleDarkPasswordField(passwordField);
 
+        JLabel l4 = createDarkLabel("分先意愿 (谁先手):");
+        JComboBox<String> turnBox = new JComboBox<>(new String[]{
+                "🎲 随机分先 (双方同选先手则随机掷骰 · 推荐)",
+                "🔵 执先 (先手 P1 · 进击进攻)",
+                "🔴 执后 (后手 P2 · 稳守反击)"
+        });
+        DarkThemeHelper.styleDarkComboBox(turnBox);
+        if (lobbyTurnPreference == person.kinman.cogame.core.model.TurnOrderPreference.FIRST) turnBox.setSelectedIndex(1);
+        else if (lobbyTurnPreference == person.kinman.cogame.core.model.TurnOrderPreference.SECOND) turnBox.setSelectedIndex(2);
+        else turnBox.setSelectedIndex(0);
+
         panel.add(l1);
         panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(roomIdField);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
         panel.add(l2);
         panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(sizeBox);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
         panel.add(l3);
         panel.add(Box.createRigidArea(new Dimension(0, 4)));
         panel.add(passwordField);
-        panel.add(Box.createRigidArea(new Dimension(0, 18)));
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
+        panel.add(l4);
+        panel.add(Box.createRigidArea(new Dimension(0, 4)));
+        panel.add(turnBox);
+        panel.add(Box.createRigidArea(new Dimension(0, 16)));
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         btnPanel.setOpaque(false);
@@ -288,9 +334,14 @@ public class OnlineLobbyFrame extends JFrame {
                 default -> 6;
             };
             String pwd = new String(passwordField.getPassword()).trim();
+            person.kinman.cogame.core.model.TurnOrderPreference pref = switch (turnBox.getSelectedIndex()) {
+                case 1 -> person.kinman.cogame.core.model.TurnOrderPreference.FIRST;
+                case 2 -> person.kinman.cogame.core.model.TurnOrderPreference.SECOND;
+                default -> person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+            };
             dialog.dispose();
             // 房主建房：isHost = true
-            enterGameRoom(roomId, size, pwd.isEmpty() ? null : pwd, true);
+            enterGameRoom(roomId, size, pwd.isEmpty() ? null : pwd, true, pref);
         });
 
         btnPanel.add(btnCancel);
@@ -436,18 +487,22 @@ public class OnlineLobbyFrame extends JFrame {
     }
 
     private void enterGameRoom(String roomId, int boardSize, String password, boolean isHost) {
+        enterGameRoom(roomId, boardSize, password, isHost, lobbyTurnPreference);
+    }
+
+    private void enterGameRoom(String roomId, int boardSize, String password, boolean isHost, person.kinman.cogame.core.model.TurnOrderPreference turnPref) {
         if (lobbyWsClient != null && lobbyWsClient.isOpen()) {
             lobbyWsClient.close();
         }
         this.dispose();
 
-        OnlineController controller = new OnlineController(serverUrl, roomId, playerName, boardSize, password);
+        OnlineController controller = new OnlineController(serverUrl, roomId, playerName, boardSize, password, turnPref);
         GameFrame gameFrame = new GameFrame(controller);
         gameFrame.display();
 
         // 如果是房主创建房间，立即弹出「等待对手加入」专属等待室
         if (isHost) {
-            RoomWaitingDialog waitingDialog = new RoomWaitingDialog(gameFrame, controller, serverUrl, playerName);
+            RoomWaitingDialog waitingDialog = new RoomWaitingDialog(gameFrame, controller, serverUrl, playerName, turnPref);
             waitingDialog.setVisible(true);
         }
     }

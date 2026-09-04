@@ -100,8 +100,8 @@ public class MainMenuFrame extends JFrame {
         );
         btnAi.addActionListener(e -> {
             int size = getSelectedBoardSize();
-            new AiPlaystyleDialog(this, selectedStyle -> {
-                new GameFrame(new AiController(size, selectedStyle)).display();
+            new AiPlaystyleDialog(this, (selectedStyle, preference) -> {
+                new GameFrame(new AiController(size, selectedStyle, preference)).display();
             }).setVisible(true);
         });
 

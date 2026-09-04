@@ -16,5 +16,6 @@ public interface GameController {
     String getModeName();
     void setOnStateChanged(Consumer<GameState> listener);
     void setOnNotification(Consumer<String> listener);
+    default void start() {}
     void close();
 }

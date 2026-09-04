@@ -193,4 +193,96 @@ public class OnlineMatchIntegrationTest {
         p2Correct.close();
         server.stop();
     }
+
+    @Test
+    public void testTurnOrderResolutionBothChooseFirst() throws Exception {
+        int port;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            port = socket.getLocalPort();
+        }
+
+        CoGameWebSocketServer server = new CoGameWebSocketServer(port);
+        server.setReuseAddr(true);
+        server.start();
+        Thread.sleep(300);
+
+        String serverUrl = "ws://127.0.0.1:" + port;
+        String roomId = "turn-order-first-" + System.currentTimeMillis();
+
+        AtomicReference<String> p1Notice = new AtomicReference<>();
+        AtomicReference<String> p2Notice = new AtomicReference<>();
+
+        // Host wants FIRST
+        OnlineController host = new OnlineController(serverUrl, roomId, "HostP1", 6, null, person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
+        host.setOnNotification(p1Notice::set);
+
+        Thread.sleep(200);
+
+        // Guest also wants FIRST
+        OnlineController guest = new OnlineController(serverUrl, roomId, "GuestP1", 6, null, person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
+        guest.setOnNotification(p2Notice::set);
+
+        long deadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < deadline) {
+            if (host.isGameStarted() && guest.isGameStarted()) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+        Assertions.assertTrue(host.isGameStarted() && guest.isGameStarted(), "双方同选先手应成功开局");
+
+        // Exactly one player is 1, the other is 2
+        Assertions.assertTrue((host.getMyPlayerId() == 1 && guest.getMyPlayerId() == 2)
+                           || (host.getMyPlayerId() == 2 && guest.getMyPlayerId() == 1));
+
+        // Resolution message should indicate both selected FIRST
+        String notice = p1Notice.get() != null ? p1Notice.get() : p2Notice.get();
+        Assertions.assertNotNull(notice);
+        Assertions.assertTrue(notice.contains("执先") || notice.contains("P1"));
+
+        host.close();
+        guest.close();
+        server.stop();
+    }
+
+    @Test
+    public void testTurnOrderResolutionComplementary() throws Exception {
+        int port;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            port = socket.getLocalPort();
+        }
+
+        CoGameWebSocketServer server = new CoGameWebSocketServer(port);
+        server.setReuseAddr(true);
+        server.start();
+        Thread.sleep(300);
+
+        String serverUrl = "ws://127.0.0.1:" + port;
+        String roomId = "turn-order-comp-" + System.currentTimeMillis();
+
+        // Host wants SECOND
+        OnlineController host = new OnlineController(serverUrl, roomId, "HostP2", 6, null, person.kinman.cogame.core.model.TurnOrderPreference.SECOND);
+
+        Thread.sleep(200);
+
+        // Guest wants FIRST
+        OnlineController guest = new OnlineController(serverUrl, roomId, "GuestP1", 6, null, person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
+
+        long deadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < deadline) {
+            if (host.isGameStarted() && guest.isGameStarted()) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+        Assertions.assertTrue(host.isGameStarted() && guest.isGameStarted(), "互补分先意愿应成功开局");
+
+        // Guest must be 1 (先手), Host must be 2 (后手)
+        Assertions.assertEquals(1, guest.getMyPlayerId(), "选择执先的Guest应当获得P1先手");
+        Assertions.assertEquals(2, host.getMyPlayerId(), "选择执后的Host应当获得P2后手");
+
+        host.close();
+        guest.close();
+        server.stop();
+    }
 }

@@ -18,6 +18,7 @@ public class OnlineController implements GameController {
     private final String playerName;
     private final int boardSize;
     private final String password;
+    private person.kinman.cogame.core.model.TurnOrderPreference turnPreference;
 
     private WebSocketClient wsClient;
     private GameState state;
@@ -30,21 +31,38 @@ public class OnlineController implements GameController {
     private Consumer<WsMessage> onRoomInfo;
 
     public OnlineController(String serverUrl, String roomId, String playerName) {
-        this(serverUrl, roomId, playerName, 6, null);
+        this(serverUrl, roomId, playerName, 6, null, person.kinman.cogame.core.model.TurnOrderPreference.RANDOM);
     }
 
     public OnlineController(String serverUrl, String roomId, String playerName, int boardSize) {
-        this(serverUrl, roomId, playerName, boardSize, null);
+        this(serverUrl, roomId, playerName, boardSize, null, person.kinman.cogame.core.model.TurnOrderPreference.RANDOM);
     }
 
     public OnlineController(String serverUrl, String roomId, String playerName, int boardSize, String password) {
+        this(serverUrl, roomId, playerName, boardSize, password, person.kinman.cogame.core.model.TurnOrderPreference.RANDOM);
+    }
+
+    public OnlineController(String serverUrl, String roomId, String playerName, int boardSize, String password, person.kinman.cogame.core.model.TurnOrderPreference turnPreference) {
         this.serverUrl = serverUrl;
         this.roomId = (roomId != null && !roomId.trim().isEmpty()) ? roomId.trim() : null;
         this.playerName = playerName;
         this.boardSize = boardSize;
         this.password = password;
+        this.turnPreference = (turnPreference != null) ? turnPreference : person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
         this.state = new GameState(boardSize);
         initConnection();
+    }
+
+    public void sendSetPreference(person.kinman.cogame.core.model.TurnOrderPreference preference) {
+        this.turnPreference = (preference != null) ? preference : person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+        if (wsClient != null && wsClient.isOpen() && roomId != null) {
+            wsClient.send(WsMessage.setPreference(roomId, this.turnPreference.getCode()).toJson());
+            notifyMessage("已向服务器更新分先偏好: " + this.turnPreference.getDisplayName());
+        }
+    }
+
+    public person.kinman.cogame.core.model.TurnOrderPreference getTurnPreference() {
+        return turnPreference;
     }
 
     private void initConnection() {
@@ -54,12 +72,12 @@ public class OnlineController implements GameController {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
                     if (roomId != null) {
-                        notifyMessage("连接成功，正在加入房间 [" + roomId + "] (规格: " + boardSize + "x" + boardSize + ")...");
-                        WsMessage joinMsg = WsMessage.joinRoom(roomId, playerName, boardSize, password);
+                        notifyMessage("连接成功，正在加入房间 [" + roomId + "] (规格: " + boardSize + "x" + boardSize + ", 分先: " + turnPreference.getDisplayName() + ")...");
+                        WsMessage joinMsg = WsMessage.joinRoom(roomId, playerName, boardSize, password, turnPreference.getCode());
                         send(joinMsg.toJson());
                     } else {
-                        notifyMessage("连接成功，正在为您随机匹配开放房间...");
-                        WsMessage randomMsg = WsMessage.randomJoin(playerName);
+                        notifyMessage("连接成功，正在为您随机匹配开放房间 (分先: " + turnPreference.getDisplayName() + ")...");
+                        WsMessage randomMsg = WsMessage.randomJoin(playerName, turnPreference.getCode());
                         send(randomMsg.toJson());
                     }
                 }
@@ -94,7 +112,10 @@ public class OnlineController implements GameController {
                                 if (msg.getState() != null) {
                                     state = msg.getState();
                                 }
-                                notifyMessage("⚔️ 对手已就绪，对局开始！您是 " + (myPlayerId == 1 ? "先手(P1)" : "后手(P2)"));
+                                String notice = (msg.getMessage() != null && !msg.getMessage().isEmpty())
+                                        ? msg.getMessage()
+                                        : "⚔️ 对局开战！您是 " + (myPlayerId == 1 ? "先手(P1)" : "后手(P2)");
+                                notifyMessage(notice);
                                 notifyState();
                                 if (onGameStarted != null) {
                                     onGameStarted.accept(state);

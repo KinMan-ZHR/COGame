@@ -21,6 +21,7 @@ public class WsMessage {
     public static final String TYPE_CREATE_ROOM = "CREATE_ROOM";
     public static final String TYPE_JOIN_ROOM = "JOIN_ROOM";
     public static final String TYPE_RANDOM_JOIN = "RANDOM_JOIN";
+    public static final String TYPE_SET_PREFERENCE = "SET_PREFERENCE";
     public static final String TYPE_ROOM_INFO = "ROOM_INFO";
 
     // 对战游戏协议
@@ -35,6 +36,7 @@ public class WsMessage {
     private String roomId;
     private String playerName;
     private String password;
+    private String turnPreference; // "FIRST", "SECOND", "RANDOM"
     private int assignedPlayerId; // 1 or 2
     private int boardSize = 6;
     private GameAction action;
@@ -80,34 +82,56 @@ public class WsMessage {
     }
 
     public static WsMessage createRoom(String roomId, String playerName, int boardSize, String password) {
+        return createRoom(roomId, playerName, boardSize, password, "RANDOM");
+    }
+
+    public static WsMessage createRoom(String roomId, String playerName, int boardSize, String password, String turnPreference) {
         WsMessage msg = new WsMessage(TYPE_CREATE_ROOM);
         msg.roomId = roomId;
         msg.playerName = playerName;
         msg.boardSize = boardSize;
         msg.password = password;
+        msg.turnPreference = turnPreference;
         return msg;
     }
 
     public static WsMessage joinRoom(String roomId, String playerName) {
-        return joinRoom(roomId, playerName, 6, null);
+        return joinRoom(roomId, playerName, 6, null, "RANDOM");
     }
 
     public static WsMessage joinRoom(String roomId, String playerName, int boardSize) {
-        return joinRoom(roomId, playerName, boardSize, null);
+        return joinRoom(roomId, playerName, boardSize, null, "RANDOM");
     }
 
     public static WsMessage joinRoom(String roomId, String playerName, int boardSize, String password) {
+        return joinRoom(roomId, playerName, boardSize, password, "RANDOM");
+    }
+
+    public static WsMessage joinRoom(String roomId, String playerName, int boardSize, String password, String turnPreference) {
         WsMessage msg = new WsMessage(TYPE_JOIN_ROOM);
         msg.roomId = roomId;
         msg.playerName = playerName;
         msg.boardSize = boardSize;
         msg.password = password;
+        msg.turnPreference = turnPreference;
         return msg;
     }
 
     public static WsMessage randomJoin(String playerName) {
+        return randomJoin(playerName, "RANDOM");
+    }
+
+    public static WsMessage randomJoin(String playerName, String turnPreference) {
         WsMessage msg = new WsMessage(TYPE_RANDOM_JOIN);
         msg.playerName = playerName;
+        msg.turnPreference = turnPreference;
+        return msg;
+    }
+
+    public static WsMessage setPreference(String roomId, String turnPreference) {
+        WsMessage msg = new WsMessage(TYPE_SET_PREFERENCE);
+        msg.roomId = roomId;
+        msg.turnPreference = turnPreference;
         return msg;
     }
 
@@ -187,6 +211,14 @@ public class WsMessage {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getTurnPreference() {
+        return turnPreference;
+    }
+
+    public void setTurnPreference(String turnPreference) {
+        this.turnPreference = turnPreference;
     }
 
     public int getAssignedPlayerId() {

@@ -102,5 +102,6 @@ public class GameFrame extends JFrame {
     public void display() {
         this.setVisible(true);
         this.requestFocusInWindow();
+        this.controller.start();
     }
 }

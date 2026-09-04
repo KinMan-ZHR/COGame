@@ -24,15 +24,22 @@ public class RoomWaitingDialog extends JDialog {
     private DarkThemeHelper.DarkButton btnCopy;
     private javax.swing.Timer dotTimer;
     private int dotCount = 0;
+    private person.kinman.cogame.core.model.TurnOrderPreference hostPreference;
+    private JLabel p1RoleLabel;
 
     public RoomWaitingDialog(Frame parent, OnlineController controller, String serverUrl, String playerName) {
+        this(parent, controller, serverUrl, playerName, person.kinman.cogame.core.model.TurnOrderPreference.RANDOM);
+    }
+
+    public RoomWaitingDialog(Frame parent, OnlineController controller, String serverUrl, String playerName, person.kinman.cogame.core.model.TurnOrderPreference initialPref) {
         super(parent, "COGame 对战房间等待室", false);
         this.parentFrame = parent;
         this.controller = controller;
         this.serverUrl = serverUrl;
         this.playerName = playerName;
+        this.hostPreference = (initialPref != null) ? initialPref : person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
 
-        this.setSize(540, 430);
+        this.setSize(560, 485);
         this.setLocationRelativeTo(parent);
         this.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         this.setResizable(false);
@@ -42,11 +49,11 @@ public class RoomWaitingDialog extends JDialog {
     }
 
     private void initUI() {
-        JPanel root = new JPanel(new BorderLayout(0, 16));
+        JPanel root = new JPanel(new BorderLayout(0, 14));
         root.setBackground(DarkThemeHelper.COLOR_BG_DARKEST);
         root.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(DarkThemeHelper.COLOR_BORDER_FOCUS, 2),
-                BorderFactory.createEmptyBorder(20, 24, 20, 24)
+                BorderFactory.createEmptyBorder(18, 22, 18, 22)
         ));
 
         // 1. 顶部：房间核心卡片 (房号 + 规格 + 密码)
@@ -60,7 +67,7 @@ public class RoomWaitingDialog extends JDialog {
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         topPanel.add(title);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+        topPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // 房号与复制按钮栏
         JPanel roomInfoBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
@@ -85,7 +92,7 @@ public class RoomWaitingDialog extends JDialog {
         roomInfoBar.add(roomLabel);
         roomInfoBar.add(btnCopy);
         topPanel.add(roomInfoBar);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 8)));
+        topPanel.add(Box.createRigidArea(new Dimension(0, 6)));
 
         // 规格与密码
         String pwdText = (controller.getPassword() != null && !controller.getPassword().isEmpty())
@@ -98,12 +105,16 @@ public class RoomWaitingDialog extends JDialog {
 
         root.add(topPanel, BorderLayout.NORTH);
 
-        // 2. 中部：对战双方席位卡片
-        JPanel seatsPanel = new JPanel(new GridLayout(1, 2, 18, 0));
+        // 2. 中部：对战双方席位卡片与分先设置
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setOpaque(false);
+
+        JPanel seatsPanel = new JPanel(new GridLayout(1, 2, 16, 0));
         seatsPanel.setOpaque(false);
 
-        // 左席位：P1 房主
-        JPanel p1Card = createPlayerCard("👑 房主 (先手)", playerName, "🟢 已就绪", new Color(14, 116, 144), new Color(56, 189, 248));
+        // 左席位：房主
+        JPanel p1Card = createPlayerCard("👑 房主 (等待仲裁)", playerName, "🟢 已就绪", new Color(14, 116, 144), new Color(56, 189, 248));
 
         // 右席位：P2 对手 (等待中)
         JPanel p2Card = new JPanel() {
@@ -121,9 +132,9 @@ public class RoomWaitingDialog extends JDialog {
         };
         p2Card.setLayout(new BoxLayout(p2Card, BoxLayout.Y_AXIS));
         p2Card.setOpaque(false);
-        p2Card.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
+        p2Card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-        JLabel p2Role = new JLabel("⚔️ 对手 (后手)");
+        JLabel p2Role = new JLabel("⚔️ 挑战者席位");
         p2Role.setFont(new Font("SansSerif", Font.BOLD, 13));
         p2Role.setForeground(new Color(251, 191, 36));
         p2Role.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -139,21 +150,54 @@ public class RoomWaitingDialog extends JDialog {
         p2StatusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         p2Card.add(p2Role);
-        p2Card.add(Box.createRigidArea(new Dimension(0, 10)));
-        p2Card.add(p2NameLabel);
         p2Card.add(Box.createRigidArea(new Dimension(0, 8)));
+        p2Card.add(p2NameLabel);
+        p2Card.add(Box.createRigidArea(new Dimension(0, 6)));
         p2Card.add(p2StatusLabel);
 
         seatsPanel.add(p1Card);
         seatsPanel.add(p2Card);
-        root.add(seatsPanel, BorderLayout.CENTER);
+        centerPanel.add(seatsPanel);
+        centerPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+
+        // 分先偏好调节栏
+        JPanel turnOrderBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        turnOrderBar.setOpaque(false);
+
+        JLabel prefLabel = new JLabel("🎯 房主分先意愿:");
+        prefLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        prefLabel.setForeground(new Color(226, 232, 240));
+        turnOrderBar.add(prefLabel);
+
+        JComboBox<String> prefBox = new JComboBox<>(new String[]{
+                "🎲 随机分先 (双方同选先手则随机掷骰)",
+                "🔵 执先 (先手 P1)",
+                "🔴 执后 (后手 P2)"
+        });
+        DarkThemeHelper.styleDarkComboBox(prefBox);
+        if (hostPreference == person.kinman.cogame.core.model.TurnOrderPreference.FIRST) prefBox.setSelectedIndex(1);
+        else if (hostPreference == person.kinman.cogame.core.model.TurnOrderPreference.SECOND) prefBox.setSelectedIndex(2);
+        else prefBox.setSelectedIndex(0);
+
+        prefBox.addActionListener(e -> {
+            hostPreference = switch (prefBox.getSelectedIndex()) {
+                case 1 -> person.kinman.cogame.core.model.TurnOrderPreference.FIRST;
+                case 2 -> person.kinman.cogame.core.model.TurnOrderPreference.SECOND;
+                default -> person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+            };
+            controller.sendSetPreference(hostPreference);
+        });
+        turnOrderBar.add(prefBox);
+        centerPanel.add(turnOrderBar);
+
+        root.add(centerPanel, BorderLayout.CENTER);
 
         // 3. 底部：动态加载呼吸提示与退出按钮
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
         bottomPanel.setOpaque(false);
 
-        statusNoticeLabel = new JLabel("● 正在等待对手加入中，请将房间号告知好友...");
+        statusNoticeLabel = new JLabel("● 正在等待对手加入中，若双方均选先手开局将公平随机分配...");
         statusNoticeLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         statusNoticeLabel.setForeground(new Color(251, 191, 36));
         statusNoticeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -235,7 +279,9 @@ public class RoomWaitingDialog extends JDialog {
         p2StatusLabel.setText("🟢 已就绪 (对局即将开始)");
         p2StatusLabel.setForeground(new Color(34, 197, 94));
 
-        statusNoticeLabel.setText("🎉 对手已加入！正在为您启动棋盘对决...");
+        int myId = controller.getMyPlayerId();
+        String roleText = (myId == 1) ? "您执先手 (P1 电光青)" : "对手执先手 (P1)，您执后手 (P2 炽金琥珀)";
+        statusNoticeLabel.setText("🎉 对手已加入！分先判定：" + roleText + "，立即启动战场...");
         statusNoticeLabel.setForeground(new Color(34, 197, 94));
 
         // 延迟 800ms 自动关闭等待室，顺畅切入战场

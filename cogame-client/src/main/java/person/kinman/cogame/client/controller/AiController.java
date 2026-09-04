@@ -3,9 +3,9 @@ package person.kinman.cogame.client.controller;
 import person.kinman.cogame.ai.AiDecision;
 import person.kinman.cogame.ai.AiPlaystyle;
 import person.kinman.cogame.ai.AiStrategy;
-import person.kinman.cogame.ai.HeuristicAi;
 import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.GameState;
+import person.kinman.cogame.core.model.TurnOrderPreference;
 import person.kinman.cogame.core.rule.GameEngine;
 
 import java.util.concurrent.ExecutorService;
@@ -13,12 +13,15 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /**
- * 人机对战控制器：玩家作为P1，内置启发式算法作为P2
+ * 人机对战控制器：支持自由分先 (玩家执先 / AI执先 / 随机)，内置多流派算法对局
  */
 public class AiController implements GameController {
     private final GameState state;
     private final AiStrategy aiStrategy;
     private final AiPlaystyle playstyle;
+    private final TurnOrderPreference preference;
+    private final int myPlayerId; // 1 (玩家先手 P1) 或 2 (玩家后手 P2)
+    private final int aiPlayerId; // 2 或 1
     private final ExecutorService aiExecutor = Executors.newSingleThreadExecutor();
 
     private Consumer<GameState> onStateChanged;
@@ -26,23 +29,64 @@ public class AiController implements GameController {
     private volatile boolean aiThinking = false;
 
     public AiController() {
-        this(6, person.kinman.cogame.ai.AiPlaystyle.ANTIGRAVITY);
+        this(6, AiPlaystyle.ANTIGRAVITY, TurnOrderPreference.FIRST);
     }
 
     public AiController(int boardSize) {
-        this(boardSize, person.kinman.cogame.ai.AiPlaystyle.ANTIGRAVITY);
+        this(boardSize, AiPlaystyle.ANTIGRAVITY, TurnOrderPreference.FIRST);
     }
 
-    public AiController(int boardSize, person.kinman.cogame.ai.AiPlaystyle playstyle) {
-        this.playstyle = (playstyle != null) ? playstyle : person.kinman.cogame.ai.AiPlaystyle.ANTIGRAVITY;
+    public AiController(int boardSize, AiPlaystyle playstyle) {
+        this(boardSize, playstyle, TurnOrderPreference.FIRST);
+    }
+
+    public AiController(int boardSize, AiPlaystyle playstyle, TurnOrderPreference preference) {
+        this.playstyle = (playstyle != null) ? playstyle : AiPlaystyle.ANTIGRAVITY;
+        this.preference = (preference != null) ? preference : TurnOrderPreference.FIRST;
         this.aiStrategy = this.playstyle.createStrategy();
         this.state = new GameState(boardSize);
-        this.state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
-        this.state.getP2().setName(this.playstyle.getPlayerName());
+
+        int resolvedHuman = 1;
+        if (this.preference == TurnOrderPreference.SECOND) {
+            resolvedHuman = 2;
+        } else if (this.preference == TurnOrderPreference.RANDOM) {
+            resolvedHuman = new java.util.Random().nextBoolean() ? 1 : 2;
+        }
+        this.myPlayerId = resolvedHuman;
+        this.aiPlayerId = (myPlayerId == 1) ? 2 : 1;
+
+        initPlayerNames();
     }
 
-    public person.kinman.cogame.ai.AiPlaystyle getPlaystyle() {
+    private void initPlayerNames() {
+        String humanName = person.kinman.cogame.client.profile.ProfileManager.getDisplayName();
+        String aiName = this.playstyle.getPlayerName();
+        if (myPlayerId == 1) {
+            state.getP1().setName(humanName);
+            state.getP2().setName(aiName);
+        } else {
+            state.getP1().setName(aiName);
+            state.getP2().setName(humanName);
+        }
+    }
+
+    public AiPlaystyle getPlaystyle() {
         return playstyle;
+    }
+
+    public TurnOrderPreference getPreference() {
+        return preference;
+    }
+
+    @Override
+    public void start() {
+        checkAndTriggerAiFirstTurn();
+    }
+
+    private void checkAndTriggerAiFirstTurn() {
+        if (!state.isOver() && state.getCurrentTurn() == aiPlayerId && !aiThinking) {
+            triggerAiTurn();
+        }
     }
 
     @Override
@@ -53,16 +97,16 @@ public class AiController implements GameController {
         if (aiThinking) {
             return; // AI 思考/移动中不接收玩家输入
         }
-        if (state.getCurrentTurn() != 1 && action.getType() != GameAction.Type.RESET) {
+        if (state.getCurrentTurn() != myPlayerId && action.getType() != GameAction.Type.RESET) {
             return;
         }
 
-        boolean ok = GameEngine.executeAction(state, 1, action);
+        boolean ok = GameEngine.executeAction(state, myPlayerId, action);
         if (ok) {
             notifyState();
 
-            // 若行动后切换到了 AI (P2) 的回合且未结束，触发 AI 思考
-            if (!state.isOver() && state.getCurrentTurn() == 2) {
+            // 若行动后切换到了 AI 的回合且未结束，触发 AI 思考
+            if (!state.isOver() && state.getCurrentTurn() == aiPlayerId) {
                 triggerAiTurn();
             }
         }
@@ -71,22 +115,22 @@ public class AiController implements GameController {
     private void triggerAiTurn() {
         aiThinking = true;
         if (onNotification != null) {
-            onNotification.accept("AI 正在深度思考连通策略...");
+            onNotification.accept(playstyle.getPlayerName() + " 正在深度思考连通策略...");
         }
 
         aiExecutor.submit(() -> {
             try {
-                Thread.sleep(300); // 适度停顿模拟思考
-                AiDecision decision = aiStrategy.computeTurn(state, 2);
+                Thread.sleep(350); // 适度停顿模拟思考
+                AiDecision decision = aiStrategy.computeTurn(state, aiPlayerId);
 
                 for (GameAction act : decision.getActions()) {
                     Thread.sleep(200); // 每步动作动画延迟
-                    GameEngine.executeAction(state, 2, act);
+                    GameEngine.executeAction(state, aiPlayerId, act);
                     notifyState();
                 }
 
                 if (onNotification != null) {
-                    onNotification.accept("AI 行动完毕: " + decision.getDescription());
+                    onNotification.accept(playstyle.getPlayerName() + " 行动完毕: " + decision.getDescription());
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -105,10 +149,10 @@ public class AiController implements GameController {
     @Override
     public void resetGame() {
         state.reset();
-        state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
-        state.getP2().setName(this.playstyle.getPlayerName());
+        initPlayerNames();
         aiThinking = false;
         notifyState();
+        checkAndTriggerAiFirstTurn();
     }
 
     @Override
@@ -118,12 +162,13 @@ public class AiController implements GameController {
 
     @Override
     public int getMyPlayerId() {
-        return 1; // 玩家固定为 P1
+        return myPlayerId;
     }
 
     @Override
     public String getModeName() {
-        return "人机挑战模式 (vs 端脑AI)";
+        String turnStr = (myPlayerId == 1) ? "玩家先手" : "AI先手";
+        return "人机流派挑战 (" + turnStr + " · " + playstyle.getPlayerName() + ")";
     }
 
     @Override

@@ -106,7 +106,7 @@ public class CoGameWebSocketServer extends WebSocketServer {
                     String roomId = (msg.getRoomId() != null && !msg.getRoomId().trim().isEmpty())
                             ? msg.getRoomId().trim() : String.valueOf((int) (Math.random() * 9000 + 1000));
                     GameRoom room = roomManager.getOrCreateRoom(roomId, msg.getPassword(), msg.getBoardSize());
-                    boolean joined = room.addPlayer(conn, msg.getPlayerName(), msg.getBoardSize(), msg.getPassword());
+                    boolean joined = room.addPlayer(conn, msg.getPlayerName(), msg.getBoardSize(), msg.getPassword(), msg.getTurnPreference());
                     if (joined) {
                         roomManager.bindPlayer(conn, room);
                     }
@@ -118,7 +118,7 @@ public class CoGameWebSocketServer extends WebSocketServer {
                     if (room == null) {
                         room = roomManager.getOrCreateRoom(roomId, msg.getPassword(), msg.getBoardSize());
                     }
-                    boolean joined = room.addPlayer(conn, msg.getPlayerName(), msg.getBoardSize(), msg.getPassword());
+                    boolean joined = room.addPlayer(conn, msg.getPlayerName(), msg.getBoardSize(), msg.getPassword(), msg.getTurnPreference());
                     if (joined) {
                         roomManager.bindPlayer(conn, room);
                     }
@@ -128,10 +128,16 @@ public class CoGameWebSocketServer extends WebSocketServer {
                     if (room == null) {
                         conn.send(WsMessage.error("当前暂无等待中的公开房间，您可以点击【创建房间】邀请好友！").toJson());
                     } else {
-                        boolean joined = room.addPlayer(conn, msg.getPlayerName(), room.getState().getRows(), null);
+                        boolean joined = room.addPlayer(conn, msg.getPlayerName(), room.getState().getRows(), null, msg.getTurnPreference());
                         if (joined) {
                             roomManager.bindPlayer(conn, room);
                         }
+                    }
+                }
+                case WsMessage.TYPE_SET_PREFERENCE -> {
+                    GameRoom room = roomManager.getRoomByPlayer(conn);
+                    if (room != null && msg.getTurnPreference() != null) {
+                        room.setPlayerPreference(conn, msg.getTurnPreference());
                     }
                 }
                 case WsMessage.TYPE_ACTION -> {

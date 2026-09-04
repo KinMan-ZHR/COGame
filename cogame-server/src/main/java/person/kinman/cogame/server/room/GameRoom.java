@@ -23,6 +23,8 @@ public class GameRoom {
     private WebSocket p2Conn;
     private String p1Name = "玩家1";
     private String p2Name = "玩家2";
+    private person.kinman.cogame.core.model.TurnOrderPreference p1Preference = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
+    private person.kinman.cogame.core.model.TurnOrderPreference p2Preference = person.kinman.cogame.core.model.TurnOrderPreference.RANDOM;
     private final GameState state;
 
     // 预留 v2.5 观战者会话集合
@@ -53,7 +55,22 @@ public class GameRoom {
         this.password = (password != null && !password.trim().isEmpty()) ? password.trim() : null;
     }
 
+    public synchronized void setPlayerPreference(WebSocket conn, String preference) {
+        person.kinman.cogame.core.model.TurnOrderPreference pref = person.kinman.cogame.core.model.TurnOrderPreference.fromCode(preference);
+        if (conn == p1Conn) {
+            p1Preference = pref;
+            logger.info("房间 [{}] 房主 [{}] 更新分先意愿为: {}", roomId, p1Name, pref.getDisplayName());
+        } else if (conn == p2Conn) {
+            p2Preference = pref;
+            logger.info("房间 [{}] 玩家2 [{}] 更新分先意愿为: {}", roomId, p2Name, pref.getDisplayName());
+        }
+    }
+
     public synchronized boolean addPlayer(WebSocket conn, String playerName, int requestedBoardSize, String candidatePassword) {
+        return addPlayer(conn, playerName, requestedBoardSize, candidatePassword, "RANDOM");
+    }
+
+    public synchronized boolean addPlayer(WebSocket conn, String playerName, int requestedBoardSize, String candidatePassword, String turnPreference) {
         // 校验密码
         if (!checkPassword(candidatePassword)) {
             logger.warn("玩家 [{}] 加入房间 [{}] 密码错误", playerName, roomId);
@@ -66,14 +83,15 @@ public class GameRoom {
             if (playerName != null && !playerName.trim().isEmpty()) {
                 p1Name = playerName.trim();
             }
+            p1Preference = person.kinman.cogame.core.model.TurnOrderPreference.fromCode(turnPreference);
             if (requestedBoardSize >= 6 && requestedBoardSize <= 13) {
                 state.setRows(requestedBoardSize);
                 state.setCols(requestedBoardSize);
                 state.reset();
             }
             state.getP1().setName(p1Name);
-            logger.info("玩家1 (房主) [{}] 加入房间 [{}] (棋盘: {}x{}, 加锁: {})",
-                    p1Name, roomId, state.getRows(), state.getCols(), hasPassword());
+            logger.info("玩家1 (房主) [{}] 加入房间 [{}] (棋盘: {}x{}, 加锁: {}, 分先意愿: {})",
+                    p1Name, roomId, state.getRows(), state.getCols(), hasPassword(), p1Preference.getDisplayName());
 
             // 通知玩家1已就绪，等待对手
             WsMessage waitMsg = new WsMessage(WsMessage.TYPE_ROOM_INFO);
@@ -84,24 +102,50 @@ public class GameRoom {
             conn.send(waitMsg.toJson());
             return true;
         } else if (p2Conn == null || p2Conn.isClosed()) {
-            p2Conn = conn;
-            if (playerName != null && !playerName.trim().isEmpty()) {
-                p2Name = playerName.trim();
-            }
-            state.getP2().setName(p2Name);
-            logger.info("玩家2 [{}] 加入房间 [{}]，对局开战！", p2Name, roomId);
+            String guestName = (playerName != null && !playerName.trim().isEmpty()) ? playerName.trim() : "玩家2";
+            p2Preference = person.kinman.cogame.core.model.TurnOrderPreference.fromCode(turnPreference);
 
-            // 双方到齐，重置棋盘并向双方广播 GAME_START
+            logger.info("玩家 [{}] 加入房间 [{}]，分先意愿: {} (房主意愿: {})",
+                    guestName, roomId, p2Preference.getDisplayName(), p1Preference.getDisplayName());
+
+            // 分先仲裁：双方均选先手则掷骰，或根据互补意愿判定
+            int chosenFirst = person.kinman.cogame.core.model.TurnOrderPreference.resolveFirstPlayer(p1Preference, p2Preference, new java.util.Random());
+            String desc = person.kinman.cogame.core.model.TurnOrderPreference.getResolutionDescription(p1Name, p1Preference, guestName, p2Preference, chosenFirst);
+
+            if (chosenFirst == 1) {
+                // 房主为 P1(先手)，挑战者为 P2(后手)
+                p2Conn = conn;
+                p2Name = guestName;
+            } else {
+                // 挑战者为 P1(先手)，原房主转为 P2(后手)
+                WebSocket hostConn = p1Conn;
+                String hostName = p1Name;
+                person.kinman.cogame.core.model.TurnOrderPreference hostPref = p1Preference;
+
+                p1Conn = conn;
+                p1Name = guestName;
+                p1Preference = p2Preference;
+
+                p2Conn = hostConn;
+                p2Name = hostName;
+                p2Preference = hostPref;
+            }
+
+            // 双方就绪，重置棋盘并向双方广播带有仲裁通知的 GAME_START
             state.reset();
             state.getP1().setName(p1Name);
             state.getP2().setName(p2Name);
 
+            logger.info("房间 [{}] 对局开战！分配结果: P1(先手)={}, P2(后手)={} [{}]", roomId, p1Name, p2Name, desc);
+
             // 给 P1 发送开始消息
             WsMessage startMsgP1 = WsMessage.gameStart(roomId, 1, state);
+            startMsgP1.setMessage(desc);
             p1Conn.send(startMsgP1.toJson());
 
             // 给 P2 发送开始消息
             WsMessage startMsgP2 = WsMessage.gameStart(roomId, 2, state);
+            startMsgP2.setMessage(desc);
             p2Conn.send(startMsgP2.toJson());
 
             // 向观战者广播对局开始

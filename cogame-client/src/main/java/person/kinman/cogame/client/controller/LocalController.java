@@ -2,6 +2,7 @@ package person.kinman.cogame.client.controller;
 
 import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.GameState;
+import person.kinman.cogame.core.model.TurnOrderPreference;
 import person.kinman.cogame.core.rule.GameEngine;
 
 import java.util.function.Consumer;
@@ -11,17 +12,39 @@ import java.util.function.Consumer;
  */
 public class LocalController implements GameController {
     private final GameState state;
+    private final TurnOrderPreference preference;
     private Consumer<GameState> onStateChanged;
     private Consumer<String> onNotification;
 
     public LocalController() {
-        this(6);
+        this(6, TurnOrderPreference.FIRST);
     }
 
     public LocalController(int boardSize) {
+        this(boardSize, TurnOrderPreference.FIRST);
+    }
+
+    public LocalController(int boardSize, TurnOrderPreference preference) {
+        this.preference = (preference != null) ? preference : TurnOrderPreference.FIRST;
         this.state = new GameState(boardSize);
-        this.state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
-        this.state.getP2().setName("玩家2 (P2)");
+        initPlayerNames();
+    }
+
+    private void initPlayerNames() {
+        boolean p1IsFirst = true;
+        if (preference == TurnOrderPreference.SECOND) {
+            p1IsFirst = false;
+        } else if (preference == TurnOrderPreference.RANDOM) {
+            p1IsFirst = new java.util.Random().nextBoolean();
+        }
+        String myName = person.kinman.cogame.client.profile.ProfileManager.getDisplayName();
+        if (p1IsFirst) {
+            this.state.getP1().setName(myName + " (先手)");
+            this.state.getP2().setName("对手 (后手)");
+        } else {
+            this.state.getP1().setName("对手 (先手)");
+            this.state.getP2().setName(myName + " (后手)");
+        }
     }
 
     @Override
@@ -39,8 +62,7 @@ public class LocalController implements GameController {
     @Override
     public void resetGame() {
         state.reset();
-        state.getP1().setName(person.kinman.cogame.client.profile.ProfileManager.getDisplayName());
-        state.getP2().setName("玩家2 (P2)");
+        initPlayerNames();
         if (onStateChanged != null) {
             onStateChanged.accept(state);
         }
