@@ -89,33 +89,6 @@
             border: 1px solid rgba(56, 189, 248, 0.35);
         }
 
-        .btn-download {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            background: linear-gradient(135deg, #0284c7, #2563eb);
-            color: white;
-            font-size: 18px;
-            font-weight: 700;
-            padding: 16px 40px;
-            border-radius: 12px;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 6px 22px rgba(2, 132, 199, 0.45);
-        }
-
-        .btn-download:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 28px rgba(2, 132, 199, 0.65);
-            background: linear-gradient(135deg, #0369a1, #1d4ed8);
-        }
-
-        .btn-download svg {
-            width: 24px;
-            height: 24px;
-            fill: currentColor;
-        }
-
         .download-actions {
             display: flex;
             justify-content: center;
@@ -124,29 +97,73 @@
             flex-wrap: wrap;
         }
 
-        .btn-download-secondary {
+        .btn-download-win {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 14px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+        }
+
+        .btn-download-win:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(2, 132, 199, 0.6);
+            background: linear-gradient(135deg, #0369a1, #1d4ed8);
+        }
+
+        .btn-download-mac {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #334155, #0f172a);
+            border: 1px solid rgba(226, 232, 240, 0.25);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 14px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.5);
+        }
+
+        .btn-download-mac:hover {
+            transform: translateY(-2px);
+            border-color: rgba(248, 250, 252, 0.6);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.7);
+            background: linear-gradient(135deg, #475569, #1e293b);
+        }
+
+        .btn-download-jar {
             display: inline-flex;
             align-items: center;
             gap: 10px;
             background: rgba(30, 41, 59, 0.9);
             border: 1px solid rgba(148, 163, 184, 0.3);
             color: #e2e8f0;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
-            padding: 16px 28px;
+            padding: 14px 24px;
             border-radius: 12px;
             text-decoration: none;
             transition: all 0.2s ease;
         }
 
-        .btn-download-secondary:hover {
+        .btn-download-jar:hover {
             background: rgba(51, 65, 85, 0.9);
             color: #fff;
             border-color: rgba(56, 189, 248, 0.5);
             transform: translateY(-2px);
         }
 
-        .btn-download-secondary svg {
+        .download-actions svg {
             width: 20px;
             height: 20px;
             fill: currentColor;
@@ -277,17 +294,21 @@
         <!-- 下载卡片 -->
         <div class="card download-box">
             <div class="download-actions">
-                <a href="COGame-Client.exe" class="btn-download" download>
-                    <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                    下载 Windows 客户端 (.exe)
+                <a href="COGame-Client.exe" class="btn-download-win" download>
+                    <svg viewBox="0 0 24 24"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.949-1.801"/></svg>
+                    Windows 专属版 (.exe)
                 </a>
-                <a href="COGame-Client.jar" class="btn-download-secondary" download>
+                <a href="COGame-macOS.zip" class="btn-download-mac" download>
+                    <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.47c.68-.82 1.13-1.96.99-3.11-1 .04-2.22.67-2.92 1.48-.62.72-1.16 1.88-1.02 3 .02 0 .04 0 .06 0 1.05 0 2.21-.57 2.89-1.37z"/></svg>
+                    macOS 专属版 (.zip)
+                </a>
+                <a href="COGame-Client.jar" class="btn-download-jar" download>
                     <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                    下载跨平台通用包 (.jar)
+                    跨平台通用包 (.jar)
                 </a>
             </div>
             <div class="file-info">
-                <strong>版本：v2.5.0 正式版</strong> | 🪟 Windows 用户推荐直接运行 <code>COGame-Client.exe</code> (双击秒开) | 🍎🐧 跨平台通用：<code>COGame-Client.jar</code> (Java 17+)
+                <strong>版本：v2.5.0 正式版</strong> | 🪟 Windows (双击 .exe) | 🍎 macOS (解压后双击 COGame.app) | 🐧 Linux / 通用 (Java 17+)
             </div>
             <div class="server-status">
                 <span class="status-dot"></span>
@@ -374,9 +395,12 @@
 
         <!-- 运行与操作 -->
         <div class="card">
-            <h2>🚀 客户端运行与控制指南</h2>
-            <p style="color: var(--text-muted); font-size: 14px;"><strong>🪟 Windows 玩家</strong>：下载后直接双击 <code>COGame-Client.exe</code> 即可秒开游戏，无需手动执行任何终端命令！<br>
-            <strong>🍎🐧 macOS / Linux 玩家</strong>：直接双击 <code>COGame-Client.jar</code>，或在终端执行：</p>
+            <h2>🚀 各平台客户端运行与控制指南</h2>
+            <div style="font-size: 14px; line-height: 1.8; color: #cbd5e1; margin-bottom: 16px;">
+                <p><strong>🪟 Windows 玩家</strong>：下载 <code>COGame-Client.exe</code> 后直接双击即可秒开游戏，无需手动执行任何终端命令！</p>
+                <p><strong>🍎 macOS 玩家</strong>：下载 <code>COGame-macOS.zip</code> 解压后直接双击 <code>COGame.app</code>（若遇系统安全提示，请右键选择「打开」或直接双击 <code>Start-COGame.command</code> 启动）。</p>
+                <p><strong>🐧 Linux / 跨平台</strong>：下载 <code>COGame-Client.jar</code>，在终端执行：</p>
+            </div>
             <pre>java -jar COGame-Client.jar</pre>
             <h3 style="font-size: 14px; margin: 14px 0 8px; color: #fff;">⌨️ 快捷按键一览：</h3>
             <ul>
@@ -396,7 +420,7 @@
             <div class="changelog-item">
                 <h3 style="color: #38bdf8;">v2.5.0 (当前最新版)</h3>
                 <ul>
-                    <li><strong>原生 Windows EXE 分发发布</strong>：新增 <code>COGame-Client.exe</code> 启动器，Windows 环境免命令双击秒开；</li>
+                    <li><strong>全平台原生独立分发</strong>：新增 <code>COGame-Client.exe</code> (Windows) 与 <code>COGame-macOS.zip</code> (macOS 原生 <code>.app</code> 束 + Retina 高清图标)，双端皆支持开箱双击秒开；</li>
                     <li><strong>终极统一 CLI 竞技场</strong>：新增 <code>./bin/cogame</code>，支持 <code>play</code>、<code>online</code>、<code>bench</code>，统一调度人与人、人与AI、AI与AI；</li>
                     <li><strong>拟人化三大独立 AI 棋风</strong>：推出 莫衡 (控盘大师)、荆刺 (破局猎手)、玄岳 (铁壁守卫)，并支持全景双能量池；</li>
                     <li><strong>优化侧边栏行动提示排版</strong>：去除冗余当前玩家前缀，确保各分辨率下信息完整居中，绝不溢出；</li>
