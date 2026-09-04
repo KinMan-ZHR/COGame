@@ -116,6 +116,42 @@
             fill: currentColor;
         }
 
+        .download-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-download-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #e2e8f0;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 16px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-download-secondary:hover {
+            background: rgba(51, 65, 85, 0.9);
+            color: #fff;
+            border-color: rgba(56, 189, 248, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-download-secondary svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
         .file-info {
             margin-top: 14px;
             font-size: 13px;
@@ -240,12 +276,18 @@
 
         <!-- 下载卡片 -->
         <div class="card download-box">
-            <a href="COGame-Client.jar" class="btn-download" download>
-                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                一键下载客户端 (COGame-Client.jar)
-            </a>
+            <div class="download-actions">
+                <a href="COGame-Client.exe" class="btn-download" download>
+                    <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    下载 Windows 客户端 (.exe)
+                </a>
+                <a href="COGame-Client.jar" class="btn-download-secondary" download>
+                    <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    下载跨平台通用包 (.jar)
+                </a>
+            </div>
             <div class="file-info">
-                <strong>版本：v2.5.0 正式版</strong> | 格式：全量 Fat-JAR (开箱即用) | 大小：约 63 MB | 环境：Java 17+
+                <strong>版本：v2.5.0 正式版</strong> | 🪟 Windows 用户推荐直接运行 <code>COGame-Client.exe</code> (双击秒开) | 🍎🐧 跨平台通用：<code>COGame-Client.jar</code> (Java 17+)
             </div>
             <div class="server-status">
                 <span class="status-dot"></span>
@@ -333,7 +375,8 @@
         <!-- 运行与操作 -->
         <div class="card">
             <h2>🚀 客户端运行与控制指南</h2>
-            <p style="color: var(--text-muted); font-size: 14px;">在 Windows / macOS / Linux 桌面环境中直接双击 <code>COGame-Client.jar</code>，或在终端执行：</p>
+            <p style="color: var(--text-muted); font-size: 14px;"><strong>🪟 Windows 玩家</strong>：下载后直接双击 <code>COGame-Client.exe</code> 即可秒开游戏，无需手动执行任何终端命令！<br>
+            <strong>🍎🐧 macOS / Linux 玩家</strong>：直接双击 <code>COGame-Client.jar</code>，或在终端执行：</p>
             <pre>java -jar COGame-Client.jar</pre>
             <h3 style="font-size: 14px; margin: 14px 0 8px; color: #fff;">⌨️ 快捷按键一览：</h3>
             <ul>
@@ -353,8 +396,10 @@
             <div class="changelog-item">
                 <h3 style="color: #38bdf8;">v2.5.0 (当前最新版)</h3>
                 <ul>
+                    <li><strong>原生 Windows EXE 分发发布</strong>：新增 <code>COGame-Client.exe</code> 启动器，Windows 环境免命令双击秒开；</li>
                     <li><strong>终极统一 CLI 竞技场</strong>：新增 <code>./bin/cogame</code>，支持 <code>play</code>、<code>online</code>、<code>bench</code>，统一调度人与人、人与AI、AI与AI；</li>
-                    <li><strong>拟人化三大独立 AI 棋风</strong>：推出 莫衡 (控盘大师)、荆刺 (破局猎手)、玄岳 (铁壁守卫)，并支持双能量池全景显示；</li>
+                    <li><strong>拟人化三大独立 AI 棋风</strong>：推出 莫衡 (控盘大师)、荆刺 (破局猎手)、玄岳 (铁壁守卫)，并支持全景双能量池；</li>
+                    <li><strong>优化侧边栏行动提示排版</strong>：去除冗余当前玩家前缀，确保各分辨率下信息完整居中，绝不溢出；</li>
                     <li><strong>真实大模型连续会话记忆</strong>：局内全程使用单会话（<code>session id</code>）记忆推理，终局自动释放注销，新局独立开启全新对话；</li>
                     <li><strong>开放式 Stdio JSON 协议</strong>：任何语言（Python/C++/Rust）编写的外部 Bot 均可 5 行接入打天梯；</li>
                     <li><strong>全自动棋谱录像</strong>：支持 <code>--record replay.json</code> 导出每步毫秒时延、位移与胜负拓扑数据。</li>

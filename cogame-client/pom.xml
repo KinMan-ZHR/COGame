@@ -65,6 +65,45 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.akathist.maven.plugins.launch4j</groupId>
+                <artifactId>launch4j-maven-plugin</artifactId>
+                <version>2.5.0</version>
+                <executions>
+                    <execution>
+                        <id>l4j-gui</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>launch4j</goal>
+                        </goals>
+                        <configuration>
+                            <headerType>gui</headerType>
+                            <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
+                            <outfile>${project.build.directory}/COGame-Client.exe</outfile>
+                            <downloadUrl>https://adoptium.net/temurin/releases/?version=17</downloadUrl>
+                            <jre>
+                                <path>%JAVA_HOME%;%PATH%</path>
+                                <minVersion>17</minVersion>
+                                <requiresJdk>false</requiresJdk>
+                                <opts>
+                                    <opt>-Dfile.encoding=UTF-8</opt>
+                                </opts>
+                            </jre>
+                            <versionInfo>
+                                <fileVersion>2.5.0.0</fileVersion>
+                                <txtFileVersion>2.5.0</txtFileVersion>
+                                <fileDescription>COGame - 《端脑》隔断棋盘博弈客户端</fileDescription>
+                                <copyright>Kinman</copyright>
+                                <productVersion>2.5.0.0</productVersion>
+                                <txtProductVersion>2.5.0</txtProductVersion>
+                                <productName>COGame</productName>
+                                <internalName>COGame-Client</internalName>
+                                <originalFilename>COGame-Client.exe</originalFilename>
+                            </versionInfo>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>

@@ -7,3 +7,4 @@ logs/
 dependency-reduced-pom.xml
 original-src/
 distribution/*.jar
+distribution/*.exe

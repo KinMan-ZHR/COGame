@@ -463,10 +463,10 @@ public class GameCanvas extends JPanel {
             }
         }
 
-        // 底部行动状态提示
+        // 底部行动状态提示 (不含玩家名，避免超出显示空间)
         g2.setColor(new Color(226, 232, 240));
         g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.drawString("▶ 当前【" + currP.getName() + "】已走 " + currentSteps + " 步，还可走 " + state.getRemainingSteps() + " 步 | L键锁边交权", x + pad + 12, curY + 84);
+        g2.drawString("▶ 已走 " + currentSteps + " 步，剩余 " + state.getRemainingSteps() + " 步 | L键锁边交权", x + pad + 12, curY + 84);
         curY += energyCardH + 14;
 
         // 操作指南小卡片
