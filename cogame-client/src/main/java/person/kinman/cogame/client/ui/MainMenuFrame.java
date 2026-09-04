@@ -21,16 +21,16 @@ public class MainMenuFrame extends JFrame {
     private final JComboBox<String> boardSizeComboBox;
 
     public MainMenuFrame() {
-        this.setTitle("COGame - 《端脑》隔断棋盘博弈 (Ver 2.2)");
+        this.setTitle("COGame - 《端脑》隔断棋盘博弈 (Ver 2.5)");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setSize(540, 560);
+        this.setSize(580, 580);
         this.setLocationRelativeTo(null);
         this.setResizable(false);
 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(new Color(11, 17, 32)); // 深邃墨蓝黑底色
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(28, 45, 28, 45));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(26, 36, 26, 36));
 
         // 1. 标题与副标题
         JLabel titleLabel = new JLabel("端 脑 · 封 锁 博 弈");
@@ -46,34 +46,35 @@ public class MainMenuFrame extends JFrame {
         mainPanel.add(titleLabel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         mainPanel.add(subLabel);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 22)));
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // 2. 棋盘规格选择面板 (6x6 ~ 13x13)
-        JPanel sizePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
+        // 2. 棋盘规格选择面板 (BorderLayout 单行完整展示，绝不换行遮挡)
+        JPanel sizePanel = new JPanel(new BorderLayout(14, 0));
         sizePanel.setBackground(new Color(21, 32, 54));
         sizePanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(51, 65, 85), 1, true),
-                BorderFactory.createEmptyBorder(4, 12, 4, 12)
+                BorderFactory.createEmptyBorder(6, 16, 6, 16)
         ));
-        sizePanel.setMaximumSize(new Dimension(450, 50));
+        sizePanel.setMaximumSize(new Dimension(500, 48));
+        sizePanel.setPreferredSize(new Dimension(500, 48));
 
         JLabel sizeLabel = new JLabel("棋盘规格 (Board Size):");
         sizeLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         sizeLabel.setForeground(new Color(226, 232, 240));
 
         String[] sizeOptions = {
-                "🐣 经典小盘 (6 × 6 - 36格 · 纯净对决)",
-                "⚔️ 战术中盘 (9 × 9 - 81格 · 要塞废墟)",
-                "👑 战略大盘 (12 × 12 - 144格 · 迷宫战场)"
+                "🐣 6 × 6 经典小盘 (36格 · 纯净对决)",
+                "⚔️ 9 × 9 战术中盘 (81格 · 要塞废墟)",
+                "👑 12 × 12 战略大盘 (144格 · 迷宫战场)"
         };
         boardSizeComboBox = new JComboBox<>(sizeOptions);
         styleDarkComboBox(boardSizeComboBox);
         boardSizeComboBox.setSelectedIndex(0);
 
-        sizePanel.add(sizeLabel);
-        sizePanel.add(boardSizeComboBox);
+        sizePanel.add(sizeLabel, BorderLayout.WEST);
+        sizePanel.add(boardSizeComboBox, BorderLayout.CENTER);
         mainPanel.add(sizePanel);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 22)));
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
         // 3. 模式选择按钮 (全自绘高对比度，彻底杜绝系统默认浅色按钮发白)
         ModernMenuButton btnLocal = new ModernMenuButton(
@@ -91,7 +92,7 @@ public class MainMenuFrame extends JFrame {
 
         ModernMenuButton btnAi = new ModernMenuButton(
                 "② 人机流派对决 (vs 智械AI)",
-                "多流派棋风 · 策略控盘(Antigravity) · 极限压迫(Codex) · 均衡守卫",
+                "多流派棋风 · 莫衡(控盘大师) · 荆刺(破局猎手) · 玄岳(铁壁守卫)",
                 new Color(5, 150, 105),
                 new Color(16, 185, 129),
                 new Color(4, 120, 87),

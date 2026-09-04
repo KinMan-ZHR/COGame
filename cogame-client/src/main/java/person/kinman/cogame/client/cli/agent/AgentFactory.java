@@ -23,16 +23,16 @@ public class AgentFactory {
             return new TerminalHumanAgent(name);
         }
 
-        if (lower.equals("antigravity") || lower.equals("ai:antigravity")) {
-            return new HeuristicAgent("Antigravity AI", new AntigravityStrategy());
+        if (lower.equals("antigravity") || lower.equals("ai:antigravity") || lower.equals("moheng") || lower.equals("ai:moheng")) {
+            return new HeuristicAgent("莫衡 (控盘大师)", new AntigravityStrategy());
         }
 
-        if (lower.equals("codex") || lower.equals("ai:codex")) {
-            return new HeuristicAgent("Codex AI", new CodexStrategy());
+        if (lower.equals("codex") || lower.equals("ai:codex") || lower.equals("jingci") || lower.equals("ai:jingci")) {
+            return new HeuristicAgent("荆刺 (破局猎手)", new CodexStrategy());
         }
 
-        if (lower.equals("classic") || lower.equals("ai:classic") || lower.equals("guard")) {
-            return new HeuristicAgent("端脑守卫 AI", new HeuristicAi(3));
+        if (lower.equals("classic") || lower.equals("ai:classic") || lower.equals("guard") || lower.equals("xuanyue") || lower.equals("ai:xuanyue")) {
+            return new HeuristicAgent("玄岳 (铁壁守卫)", new HeuristicAi(3));
         }
 
         if (lower.equals("llm:gemini")) {

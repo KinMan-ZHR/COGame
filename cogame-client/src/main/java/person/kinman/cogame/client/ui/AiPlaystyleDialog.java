@@ -56,16 +56,19 @@ public class AiPlaystyleDialog extends JDialog {
         contentPanel.add(cardsContainer);
         contentPanel.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        // 3. 底部开战按钮
-        JButton startBtn = new JButton("⚔️ 选定此流派 · 立即进入对局");
+        // 3. 底部开战按钮 (采用 DarkThemeHelper.DarkButton，彻底消除操作系统原生亮片白底反噬)
+        DarkThemeHelper.DarkButton startBtn = new DarkThemeHelper.DarkButton(
+                "⚔️ 选定此流派 · 立即进入对局",
+                new Color(2, 132, 199),
+                new Color(14, 165, 233),
+                new Color(3, 105, 161),
+                new Color(56, 189, 248),
+                Color.WHITE
+        );
         startBtn.setFont(new Font("SansSerif", Font.BOLD, 15));
-        startBtn.setForeground(Color.WHITE);
-        startBtn.setBackground(new Color(14, 165, 233));
-        startBtn.setFocusPainted(false);
-        startBtn.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
-        startBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        startBtn.setPreferredSize(new Dimension(420, 48));
         startBtn.setMaximumSize(new Dimension(420, 48));
+        startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         startBtn.addActionListener(e -> {
             dispose();

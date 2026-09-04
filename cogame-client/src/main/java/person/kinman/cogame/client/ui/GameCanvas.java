@@ -387,58 +387,87 @@ public class GameCanvas extends JPanel {
         curY += 46;
 
         // 玩家 1 卡片 (先手 - 青色系)
+        int maxEnergy = state.getMaxEnergy();
+        int regen = state.getEnergyRegen();
+
         drawPlayerCard(g2, x + pad, curY, innerWidth, state.getP1(), player1Img,
                 new Color(6, 182, 212), state.getCurrentTurn() == 1,
                 state.isOver() ? state.getP1Territory() : -1,
-                state.isOver() ? state.getP1UnblockedEdges() : -1);
+                state.isOver() ? state.getP1UnblockedEdges() : -1, maxEnergy);
         curY += 105;
 
         // 玩家 2 卡片 (后手 - 琥珀色系)
         drawPlayerCard(g2, x + pad, curY, innerWidth, state.getP2(), player2Img,
                 new Color(245, 158, 11), state.getCurrentTurn() == 2,
                 state.isOver() ? state.getP2Territory() : -1,
-                state.isOver() ? state.getP2UnblockedEdges() : -1);
-        curY += 115;
+                state.isOver() ? state.getP2UnblockedEdges() : -1, maxEnergy);
+        curY += 112;
 
-        // 动态能量池卡片
+        // 动态双能量池全景仪表盘 (同时呈现双方能量)
+        int energyCardH = 96;
         g2.setColor(new Color(30, 41, 59));
-        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 58, 10, 10));
+        g2.fill(new RoundRectangle2D.Float(x + pad, curY, innerWidth, energyCardH, 10, 10));
         g2.setColor(new Color(56, 189, 248));
         g2.setStroke(new BasicStroke(1.2f));
-        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, 58, 10, 10));
+        g2.draw(new RoundRectangle2D.Float(x + pad, curY, innerWidth, energyCardH, 10, 10));
 
         PlayerState currP = state.getCurrentPlayer();
-        int maxEnergy = state.getMaxEnergy();
-        int regen = state.getEnergyRegen();
-        int curEnergy = currP.getEnergy();
+        PlayerState p1 = state.getP1();
+        PlayerState p2 = state.getP2();
         int currentSteps = state.getCurrentTurnSteps();
 
+        // 标题
         g2.setColor(new Color(241, 245, 249));
         g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-        String energyTitle = String.format("能量池: %d/%d (每回合+%d)", curEnergy, maxEnergy, regen);
-        g2.drawString(energyTitle, x + pad + 12, curY + 20);
+        String energyTitle = String.format("⚡ 双方能量池 (上限: %d | 每回合恢复: +%d)", maxEnergy, regen);
+        g2.drawString(energyTitle, x + pad + 12, curY + 18);
 
         int dotCount = maxEnergy;
-        int dotSpacing = Math.min(18, Math.max(10, (innerWidth - 180) / dotCount));
+        int dotSpacing = Math.min(15, Math.max(9, (innerWidth - 175) / Math.max(1, dotCount)));
+
+        // P1 行 (青色)
+        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setColor(new Color(6, 182, 212));
+        g2.drawString(String.format("P1(青) %-6s: %d/%d", abbreviateName(p1.getName(), 6), p1.getEnergy(), maxEnergy), x + pad + 12, curY + 41);
         for (int i = 0; i < dotCount; i++) {
-            int dotX = x + pad + 170 + i * dotSpacing;
-            int dotY = curY + 10;
-            if (i < currentSteps) {
-                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗移动步数
-                g2.fillOval(dotX, dotY, 12, 12);
-            } else if (i < curEnergy) {
-                g2.setColor(new Color(56, 189, 248)); // 亮青色：当前可用剩余能量
-                g2.fillOval(dotX, dotY, 12, 12);
+            int dotX = x + pad + 165 + i * dotSpacing;
+            int dotY = curY + 31;
+            if (state.getCurrentTurn() == 1 && i < currentSteps) {
+                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗步数
+                g2.fillOval(dotX, dotY, 10, 10);
+            } else if (i < p1.getEnergy()) {
+                g2.setColor(new Color(6, 182, 212)); // 亮青色：P1 当前可用能量
+                g2.fillOval(dotX, dotY, 10, 10);
             } else {
-                g2.setColor(new Color(71, 85, 105)); // 灰色圆环：未蓄满容量
-                g2.drawOval(dotX, dotY, 12, 12);
+                g2.setColor(new Color(71, 85, 105)); // 灰色圆环：空余容量
+                g2.drawOval(dotX, dotY, 10, 10);
             }
         }
 
-        g2.setColor(new Color(148, 163, 184));
+        // P2 行 (琥珀色)
+        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setColor(new Color(245, 158, 11));
+        g2.drawString(String.format("P2(金) %-6s: %d/%d", abbreviateName(p2.getName(), 6), p2.getEnergy(), maxEnergy), x + pad + 12, curY + 63);
+        for (int i = 0; i < dotCount; i++) {
+            int dotX = x + pad + 165 + i * dotSpacing;
+            int dotY = curY + 53;
+            if (state.getCurrentTurn() == 2 && i < currentSteps) {
+                g2.setColor(new Color(239, 68, 68)); // 红色：本回合已消耗步数
+                g2.fillOval(dotX, dotY, 10, 10);
+            } else if (i < p2.getEnergy()) {
+                g2.setColor(new Color(245, 158, 11)); // 琥珀色：P2 当前可用能量
+                g2.fillOval(dotX, dotY, 10, 10);
+            } else {
+                g2.setColor(new Color(71, 85, 105)); // 灰色圆环：空余容量
+                g2.drawOval(dotX, dotY, 10, 10);
+            }
+        }
+
+        // 底部行动状态提示
+        g2.setColor(new Color(226, 232, 240));
         g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.drawString("本回合已走 " + currentSteps + " 步，还可走 " + state.getRemainingSteps() + " 步 | L键锁边交权", x + pad + 12, curY + 44);
-        curY += 70;
+        g2.drawString("▶ 当前【" + currP.getName() + "】已走 " + currentSteps + " 步，还可走 " + state.getRemainingSteps() + " 步 | L键锁边交权", x + pad + 12, curY + 84);
+        curY += energyCardH + 14;
 
         // 操作指南小卡片
         g2.setColor(new Color(30, 41, 59));
@@ -497,7 +526,7 @@ public class GameCanvas extends JPanel {
         }
     }
 
-    private void drawPlayerCard(Graphics2D g2, int cx, int cy, int cWidth, PlayerState player, Image avatar, Color accent, boolean isTurn, int territory, int edges) {
+    private void drawPlayerCard(Graphics2D g2, int cx, int cy, int cWidth, PlayerState player, Image avatar, Color accent, boolean isTurn, int territory, int edges, int maxEnergy) {
         // 卡片底色
         g2.setColor(isTurn ? new Color(30, 41, 59) : new Color(15, 23, 42));
         g2.fill(new RoundRectangle2D.Float(cx, cy, cWidth, 90, 12, 12));
@@ -540,6 +569,14 @@ public class GameCanvas extends JPanel {
         g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
         g2.setColor(new Color(148, 163, 184));
         g2.drawString("身位: " + (player.getId() == 1 ? "先手 (P1)" : "后手 (P2)"), cx + 80, cy + 50);
+
+        // 玩家卡片内实时呈现自身能量
+        g2.setColor(accent);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.drawString("⚡ 能量: " + player.getEnergy() + " / " + maxEnergy, cx + 185, cy + 50);
+
+        g2.setColor(new Color(148, 163, 184));
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
         g2.drawString("朝向: " + player.getDirection().getName() + " | 位置: (" + player.getR() + "," + player.getC() + ")", cx + 80, cy + 70);
 
         // 若已终局显示领地
@@ -548,6 +585,12 @@ public class GameCanvas extends JPanel {
             g2.setFont(new Font("SansSerif", Font.BOLD, 13));
             g2.drawString(territory + " 格 / " + edges + " 边", cx + cWidth - 85, cy + 70);
         }
+    }
+
+    private String abbreviateName(String name, int maxLen) {
+        if (name == null) return "";
+        if (name.length() <= maxLen) return name;
+        return name.substring(0, maxLen - 1) + "…";
     }
 
     private void drawKeyGuideRow(Graphics2D g2, int x, int y, String key, String desc) {
