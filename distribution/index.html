@@ -253,9 +253,36 @@
             </div>
         </div>
 
-        <!-- 核心重磅升级 -->
+        <!-- v2.5.0 重磅升级 -->
+        <div class="card" style="border: 1px solid rgba(56, 189, 248, 0.4); background: linear-gradient(180deg, rgba(2, 132, 199, 0.08) 0%, rgba(21, 31, 50, 0.8) 100%);">
+            <h2 style="color: #38bdf8;">🤖 v2.5.0 智械 AI 竞技场与大模型会话记忆 (最新)</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <h3>🧠 三大独立 AI 棋风流派</h3>
+                    <p>彻底抛弃生硬难度划分！提供<strong>Antigravity (策略控盘流)</strong>、<strong>Codex (极限压迫流)</strong>与<strong>端脑守卫 (均衡图论流)</strong>，专属卡片弹窗任你挑选！</p>
+                </div>
+                <div class="feature-item">
+                    <h3>🔄 大模型局内连续会话记忆</h3>
+                    <p>真实大模型（Codex/Gemini）接入！<strong>整局对战保持同一会话持续推理</strong>，保有长线战略记忆；<strong>终局自动注销并于新局开辟全新对话</strong>！</p>
+                </div>
+                <div class="feature-item">
+                    <h3>⚡ 终极统一全功能 CLI (<code>./bin/cogame</code>)</h3>
+                    <p>一个命令调度一切：<code>cogame play</code> (本地自由对抗)、<code>cogame online</code> (挂载网络房间)、<code>cogame bench</code> (多轮基准压测)！</p>
+                </div>
+                <div class="feature-item">
+                    <h3>🔌 开放式 Stdio JSON 接入协议</h3>
+                    <p>任何语言编写的程序（Python / C++ / Rust）仅需 5 行代码处理 Stdin/Stdout JSON，即可一键挂载到 COGame 客户端打天梯！</p>
+                </div>
+                <div class="feature-item">
+                    <h3>📁 完整棋谱录像与毫秒级遥测</h3>
+                    <p>支持 <code>--record replay.json</code> 自动沉淀每回合毫秒时延、位移路径与胜负拓扑，直接作为强化学习与大模型微调的优质数据集！</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.4.0 核心机制 -->
         <div class="card">
-            <h2>✨ v2.4.0 核心机制与玩法革新</h2>
+            <h2>✨ v2.4.0 动态能量池与三大黄金阶梯</h2>
             <div class="features-grid">
                 <div class="feature-item">
                     <h3>⚡ 动态能量池 (Energy Pool)</h3>
@@ -280,10 +307,6 @@
                 <div class="feature-item">
                     <h3>🎨 DarkTheme 全自绘深色</h3>
                     <p>全面重构深色自绘组件（DarkButton 与专属暗黑弹窗），彻底切断 Windows 原生 LookAndFeel 浅色反噬，告别白底亮片！</p>
-                </div>
-                <div class="feature-item">
-                    <h3>🤖 连续会话记忆与全功能 CLI 竞技场</h3>
-                    <p>面向真人与 AI 的双向竞技体系！支持真实大模型（Codex/Gemini）<strong>单局持续会话记忆</strong>（下一局自动开辟新对话）；支持任意第三方语言（Python/C++）通过标准 JSON 挂载参赛与多轮基准压测！</p>
                 </div>
             </div>
         </div>
@@ -328,7 +351,17 @@
         <div class="card">
             <h2>📜 版本演进历史</h2>
             <div class="changelog-item">
-                <h3>v2.4.0 (当前最新版)</h3>
+                <h3 style="color: #38bdf8;">v2.5.0 (当前最新版)</h3>
+                <ul>
+                    <li><strong>终极统一 CLI 竞技场</strong>：新增 <code>./bin/cogame</code>，支持 <code>play</code>、<code>online</code>、<code>bench</code>，统一调度人与人、人与AI、AI与AI；</li>
+                    <li><strong>三大独立 AI 棋风流派</strong>：废除生硬难度划分，推出 Antigravity (策略控盘)、Codex (极限压迫)、端脑守卫 (均衡图论)；</li>
+                    <li><strong>真实大模型连续会话记忆</strong>：局内全程使用单会话（<code>session id</code>）记忆推理，终局自动释放注销，新局独立开启全新对话；</li>
+                    <li><strong>开放式 Stdio JSON 协议</strong>：任何语言（Python/C++/Rust）编写的外部 Bot 均可 5 行接入打天梯；</li>
+                    <li><strong>全自动棋谱录像</strong>：支持 <code>--record replay.json</code> 导出每步毫秒时延、位移与胜负拓扑数据。</li>
+                </ul>
+            </div>
+            <div class="changelog-item">
+                <h3>v2.4.0</h3>
                 <ul>
                     <li>实装动态能量池系统（能量上限 = 边长-1，每回合恢复 ⌊边长/2⌋）；</li>
                     <li>棋盘规格收敛为三大黄金阶梯：小盘 6×6、中盘 9×9、大盘 12×12；</li>
