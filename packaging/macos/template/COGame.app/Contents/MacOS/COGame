@@ -1,0 +1,42 @@
+#!/bin/bash
+DIR="$(cd "$(dirname "$0")"/.. && pwd)"
+RESOURCES="$DIR/Resources"
+JAR="$RESOURCES/COGame-Client.jar"
+
+JAVA_CMD=""
+
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+fi
+
+if [ -z "$JAVA_CMD" ] && [ -x "/usr/libexec/java_home" ]; then
+    JH=$(/usr/libexec/java_home -v 17+ 2>/dev/null || true)
+    if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+        JAVA_CMD="$JH/bin/java"
+    fi
+fi
+
+if [ -z "$JAVA_CMD" ]; then
+    for p in         "/opt/homebrew/opt/openjdk@17/bin/java"         "/opt/homebrew/opt/openjdk@21/bin/java"         "/opt/homebrew/opt/openjdk/bin/java"         "/usr/local/opt/openjdk@17/bin/java"         "/usr/local/opt/openjdk@21/bin/java"         "/usr/local/opt/openjdk/bin/java"         "/Library/Java/JavaVirtualMachines"/*/Contents/Home/bin/java; do
+        if [ -x "$p" ]; then
+            JAVA_CMD="$p"
+            break
+        fi
+    done
+fi
+
+if [ -z "$JAVA_CMD" ]; then
+    if command -v java >/dev/null 2>&1; then
+        JAVA_CMD="java"
+    fi
+fi
+
+if [ -z "$JAVA_CMD" ]; then
+    RESPONSE=$(osascript -e 'display dialog "运行 COGame 需要 Java 17 或更高版本。\n\n请前往官网安装，或在终端执行：\nbrew install openjdk@17" with title "COGame - 提示" buttons {"前往下载", "取消"} default button 1 with icon stop' 2>/dev/null || true)
+    if echo "$RESPONSE" | grep -q "前往下载"; then
+        open "https://adoptium.net/temurin/releases/?version=17"
+    fi
+    exit 1
+fi
+
+exec "$JAVA_CMD"     -Xdock:name="COGame"     -Dapple.awt.application.name="COGame"     -Dapple.laf.useScreenMenuBar=true     -Dfile.encoding=UTF-8     -jar "$JAR" "$@"

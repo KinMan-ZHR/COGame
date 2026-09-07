@@ -60,23 +60,9 @@ if [ -f "${SERVER_JAR}" ]; then
     cp "${SERVER_JAR}" "${PROJECT_ROOT}/distribution/COGame-Server.jar"
 fi
 
-# 更新 macOS zip 内部的 Client.jar
-if [ -f "${MAC_ZIP}" ] && [ -f "${CLIENT_JAR}" ]; then
-    echo "🍏 更新 macOS 客户端压缩包内部 jar..."
-    python3 -c "
-import zipfile, shutil
-zip_path = '${MAC_ZIP}'
-new_jar = '${CLIENT_JAR}'
-temp_zip = zip_path + '.tmp'
-with zipfile.ZipFile(zip_path, 'r') as zin, zipfile.ZipFile(temp_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zout:
-    for item in zin.infolist():
-        if item.filename == 'COGame.app/Contents/Resources/COGame-Client.jar':
-            with open(new_jar, 'rb') as f:
-                zout.writestr(item, f.read())
-        else:
-            zout.writestr(item, zin.read(item.filename))
-shutil.move(temp_zip, zip_path)
-"
+# 构建 macOS zip 安装包
+if [ -f "${CLIENT_JAR}" ]; then
+    "${PROJECT_ROOT}/packaging/macos/build-macos-zip.sh" "${CLIENT_JAR}"
 fi
 
 # 同步更新 GitHub Pages 静态主页 docs/
