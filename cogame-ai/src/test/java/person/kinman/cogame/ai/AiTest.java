@@ -78,4 +78,44 @@ public class AiTest {
         Assertions.assertEquals(35, state.getP2Territory());
         Assertions.assertEquals(1, state.getP1Territory());
     }
+
+    @Test
+    public void testCeTianStrategyDeepSearch() {
+        GameState state = new GameState(6);
+        GameEngine.executeAction(state, 1, GameAction.lock());
+
+        // 测试深度 5 (默认) 与深度 10 (最大)
+        CeTianStrategy ct5 = new CeTianStrategy(5);
+        Assertions.assertEquals(5, ct5.getSearchDepth());
+        AiDecision dec5 = ct5.computeTurn(state, 2);
+        Assertions.assertNotNull(dec5);
+        Assertions.assertFalse(dec5.getActions().isEmpty());
+
+        CeTianStrategy ct10 = new CeTianStrategy(10);
+        Assertions.assertEquals(10, ct10.getSearchDepth());
+        AiDecision dec10 = ct10.computeTurn(state, 2);
+        Assertions.assertNotNull(dec10);
+        Assertions.assertFalse(dec10.getActions().isEmpty());
+    }
+
+    @Test
+    public void testJueYingStrategyDeepSearchAndWinningCut() {
+        GameState state = new GameState(6);
+        state.getBoard().lockEdge(0, 0, Direction.RIGHT, 1);
+        state.getP2().setR(1);
+        state.getP2().setC(0);
+        state.getP2().setDirection(Direction.UP);
+        state.setCurrentTurn(2);
+
+        JueYingStrategy jy = (JueYingStrategy) AiPlaystyle.JUE_YING.createStrategy(6);
+        Assertions.assertEquals(6, jy.getSearchDepth());
+
+        AiDecision decision = jy.computeTurn(state, 2);
+        Assertions.assertNotNull(decision);
+        for (GameAction act : decision.getActions()) {
+            GameEngine.executeAction(state, 2, act);
+        }
+        Assertions.assertTrue(state.isOver(), "绝影应当一击必杀斩断盘面");
+        Assertions.assertEquals(2, state.getWinner(), "绝影应当获胜");
+    }
 }

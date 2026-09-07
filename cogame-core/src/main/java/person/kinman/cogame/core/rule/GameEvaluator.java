@@ -266,6 +266,70 @@ public class GameEvaluator {
     }
 
     /**
+     * 获取避开对手身位的前提下，从 (r1, c1) 到 (r2, c2) 的最短路径移动方向序列（若不可达返回空列表）
+     */
+    public static List<Direction> findPathAvoidingOpponent(Board board, int r1, int c1, int r2, int c2, int oppR, int oppC) {
+        List<Direction> path = new ArrayList<>();
+        if (r1 == r2 && c1 == c2) return path;
+        if (r2 == oppR && c2 == oppC) return path;
+        if (!board.isValidCoord(r1, c1) || !board.isValidCoord(r2, c2)) return path;
+
+        int rows = board.getRows();
+        int cols = board.getCols();
+        int[][] prevR = new int[rows][cols];
+        int[][] prevC = new int[rows][cols];
+        Direction[][] prevDir = new Direction[rows][cols];
+        boolean[][] visited = new boolean[rows][cols];
+
+        for (int[] row : prevR) Arrays.fill(row, -1);
+        for (int[] row : prevC) Arrays.fill(row, -1);
+
+        Queue<int[]> queue = new ArrayDeque<>();
+        queue.add(new int[]{r1, c1});
+        visited[r1][c1] = true;
+
+        boolean found = false;
+        while (!queue.isEmpty()) {
+            int[] curr = queue.poll();
+            int r = curr[0];
+            int c = curr[1];
+            if (r == r2 && c == c2) {
+                found = true;
+                break;
+            }
+
+            for (Direction dir : Direction.values()) {
+                if (board.isConnected(r, c, dir)) {
+                    int nr = r + dir.getDr();
+                    int nc = c + dir.getDc();
+                    if (nr == oppR && nc == oppC) continue;
+                    if (!visited[nr][nc]) {
+                        visited[nr][nc] = true;
+                        prevR[nr][nc] = r;
+                        prevC[nr][nc] = c;
+                        prevDir[nr][nc] = dir;
+                        queue.add(new int[]{nr, nc});
+                    }
+                }
+            }
+        }
+
+        if (!found) return path;
+
+        int curR = r2;
+        int curC = c2;
+        while (curR != r1 || curC != c1) {
+            Direction d = prevDir[curR][curC];
+            path.add(0, d);
+            int pr = prevR[curR][curC];
+            int pc = prevC[curR][curC];
+            curR = pr;
+            curC = pc;
+        }
+        return path;
+    }
+
+    /**
      * 获取从起点出发在指定步数内可达的所有格子集合（避开对手身位）
      */
     public static Set<Long> getReachableWithinSteps(Board board, int startR, int startC, int oppR, int oppC, int maxSteps) {

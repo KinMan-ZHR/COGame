@@ -79,7 +79,7 @@ public class GameFrame extends JFrame {
         bar.add(leftPanel, BorderLayout.WEST);
 
         // 2. 中间：实时状态与操作指令
-        statusLabel = new JLabel("💡 WASD 移动定位 · L 键封锁 · 空格步进 · P 键寻路", JLabel.CENTER);
+        statusLabel = new JLabel("💡 鼠标左键点击移动 · 右键定向锁边 | 或使用 WASD + L 键", JLabel.CENTER);
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         statusLabel.setForeground(new Color(148, 163, 184));
         bar.add(statusLabel, BorderLayout.CENTER);
@@ -164,7 +164,7 @@ public class GameFrame extends JFrame {
                     statusLabel.setForeground(new Color(56, 189, 248));
                     Timer t = new Timer(6000, evt -> {
                         if (statusLabel.getText().equals(msg)) {
-                            statusLabel.setText("💡 WASD 移动定位 · L 键封锁 · 空格步进 · P 键寻路");
+                            statusLabel.setText("💡 鼠标左键点击移动 · 右键定向锁边 | 或使用 WASD + L 键");
                             statusLabel.setForeground(new Color(148, 163, 184));
                         }
                     });
@@ -215,7 +215,7 @@ public class GameFrame extends JFrame {
     }
 
     private void setupKeyListeners() {
-        this.addKeyListener(new KeyAdapter() {
+        KeyAdapter keyAdapter = new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
@@ -241,7 +241,9 @@ public class GameFrame extends JFrame {
                             toggleFullScreen();
                 }
             }
-        });
+        };
+        this.addKeyListener(keyAdapter);
+        this.canvas.addKeyListener(keyAdapter);
     }
 
     /**

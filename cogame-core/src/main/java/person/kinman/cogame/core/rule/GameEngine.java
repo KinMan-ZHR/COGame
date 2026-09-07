@@ -92,6 +92,9 @@ public class GameEngine {
                 return true;
             }
             case LOCK -> {
+                if (action.getDirection() != null) {
+                    player.setDirection(action.getDirection());
+                }
                 Direction dir = player.getDirection();
                 boolean locked = board.lockEdge(player.getR(), player.getC(), dir, player.getId());
                 if (locked) {

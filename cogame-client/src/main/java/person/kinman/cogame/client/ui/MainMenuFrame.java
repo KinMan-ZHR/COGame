@@ -91,8 +91,8 @@ public class MainMenuFrame extends JFrame {
         });
 
         ModernMenuButton btnAi = new ModernMenuButton(
-                "② 人机流派对决 (vs 智械AI)",
-                "多流派棋风 · 莫衡(控盘大师) · 荆刺(破局猎手) · 玄岳(铁壁守卫)",
+                "② 人机流派对决 (vs 智械国手)",
+                "国手棋风 · 策天(盘枢国手) · 绝影(贴身猎手) · 3~10层深算推演",
                 new Color(5, 150, 105),
                 new Color(16, 185, 129),
                 new Color(4, 120, 87),
@@ -100,8 +100,8 @@ public class MainMenuFrame extends JFrame {
         );
         btnAi.addActionListener(e -> {
             int size = getSelectedBoardSize();
-            new AiPlaystyleDialog(this, (selectedStyle, preference) -> {
-                new GameFrame(new AiController(size, selectedStyle, preference)).display();
+            new AiPlaystyleDialog(this, (selectedStyle, depth, preference) -> {
+                new GameFrame(new AiController(size, selectedStyle, depth, preference)).display();
             }).setVisible(true);
         });
 

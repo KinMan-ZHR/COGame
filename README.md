@@ -105,3 +105,35 @@ mvn test
 # 打包所有模块与全量 Fat JAR
 mvn clean package
 ```
+
+---
+
+## 五、 GitHub 同步与 Release 发布规范
+
+本项目统一托管于 GitHub：[COGame 仓库](https://github.com/KinMan-ZHR/COGame.git)
+
+### 1. 发布流程规范
+- **代码推送**：本地开发与功能验证通过后，代码应及时推送到 GitHub 远端仓库（`origin/master`）。
+- **版本打 Tag**：在正式发布任何 Release 版本前，**代码必须打上对应的语义化 Tag**（如 `v2.6.0`）。
+- **Tag 推送**：Tag 必须同步推送到 GitHub，以驱动 GitHub Releases 及版本归档。
+
+### 2. 一键自动化发布
+项目内置了一键 Release 发布脚本：
+```bash
+# 自动执行测试、打包、同步 distribution、打 Tag 并推送到 GitHub
+./scripts/release.sh 2.6.0
+```
+
+手动发布标准流程：
+```bash
+# 1. 运行测试
+mvn test
+
+# 2. 创建附注标签
+git tag -a v2.6.0 -m "Release v2.6.0"
+
+# 3. 推送代码与标签到 GitHub
+git push origin master
+git push origin v2.6.0
+```
+

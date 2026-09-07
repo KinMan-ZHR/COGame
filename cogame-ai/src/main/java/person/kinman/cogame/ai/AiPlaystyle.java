@@ -1,32 +1,24 @@
 package person.kinman.cogame.ai;
 
 /**
- * AI 流派与性格枚举：供玩家选择不同风格的对手对战
+ * AI 流派与性格枚举 (v2.6 双国手战略棋手架构)
  */
 public enum AiPlaystyle {
 
-    ANTIGRAVITY(
-            "🧠 莫衡 · 控局大师",
-            "全局领地划分 · 蓄力长途奔袭",
-            "莫衡 (控盘大师)",
+    CE_TIAN(
+            "🧠 策天 · 盘枢国手",
+            "全局领地切割 · 虚实蓄力长策",
+            "策天 (盘枢国手)",
             "#38bdf8",
-            "大局观控盘，战术蓄力后长途穿插反切"
+            "大局观控盘，擅长宏观划分全图势力范围，深算步数步步为营，战术蓄力后长途穿插反切绝杀"
     ),
 
-    CODEX(
-            "⚔️ 荆刺 · 破局猎手",
-            "贴身压制缠斗 · 强攻封锁要道",
-            "荆刺 (破局猎手)",
+    JUE_YING(
+            "⚔️ 绝影 · 贴身猎手",
+            "近身刺刀缠斗 · 极限封锁窒息",
+            "绝影 (贴身猎手)",
             "#f59e0b",
-            "进攻性极强，紧贴身位封死逃生出口"
-    ),
-
-    CLASSIC(
-            "🛡️ 玄岳 · 铁壁守卫",
-            "通路阻截破坏 · 稳健防守反击",
-            "玄岳 (铁壁守卫)",
-            "#10b981",
-            "经典稳健守门，步步为营截断最短连通"
+            "进攻性极强，曼哈顿紧贴对手身位，层层封死所有出口与逃生通道，窒息式贴身死斗"
     );
 
     private final String displayName;
@@ -64,10 +56,13 @@ public enum AiPlaystyle {
     }
 
     public AiStrategy createStrategy() {
+        return createStrategy(5);
+    }
+
+    public AiStrategy createStrategy(int searchDepth) {
         return switch (this) {
-            case ANTIGRAVITY -> new AntigravityStrategy();
-            case CODEX -> new CodexStrategy();
-            case CLASSIC -> new HeuristicAi(3);
+            case CE_TIAN -> new CeTianStrategy(searchDepth);
+            case JUE_YING -> new JueYingStrategy(searchDepth);
         };
     }
 }

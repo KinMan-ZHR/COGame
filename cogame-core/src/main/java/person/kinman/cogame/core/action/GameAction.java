@@ -44,6 +44,10 @@ public class GameAction {
         return new GameAction(Type.LOCK);
     }
 
+    public static GameAction lock(Direction dir) {
+        return new GameAction(Type.LOCK, dir);
+    }
+
     public static GameAction reset() {
         return new GameAction(Type.RESET);
     }

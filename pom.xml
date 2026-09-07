@@ -6,7 +6,7 @@
 
     <groupId>person.kinman.cogame</groupId>
     <artifactId>cogame-parent</artifactId>
-    <version>2.3.0</version>
+    <version>2.6.0</version>
     <packaging>pom</packaging>
 
     <name>COGame Parent</name>

@@ -3,6 +3,7 @@ package person.kinman.cogame.client.ui;
 import person.kinman.cogame.client.audio.AudioPlayer;
 import person.kinman.cogame.client.controller.GameController;
 import person.kinman.cogame.client.controller.OnlineController;
+import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.Board;
 import person.kinman.cogame.core.model.Direction;
 import person.kinman.cogame.core.model.GameState;
@@ -12,6 +13,9 @@ import person.kinman.cogame.core.rule.GameEvaluator;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
@@ -21,6 +25,7 @@ import java.util.Set;
 
 /**
  * 游戏核心画板：支持 6x6~13x13 动态规格、自适应窗口/全屏缩放与高对比度现代暗色视觉
+ * v2.6 全新支持鼠标交互：左键点击目标格移动、右键象限判定朝向锁边与实时悬停预览指引
  */
 public class GameCanvas extends JPanel {
     private final GameController controller;
@@ -29,10 +34,22 @@ public class GameCanvas extends JPanel {
     private boolean showPath = false;
     private String statusNotification = "";
 
+    // 鼠标交互与悬停预览状态
+    private int hoverR = -1;
+    private int hoverC = -1;
+    private Direction hoverDir = null;
+    private int lastStartX = 0;
+    private int lastStartY = 0;
+    private int lastCellSize = 0;
+    private int lastRows = 0;
+    private int lastCols = 0;
+
     public GameCanvas(GameController controller) {
         this.controller = controller;
         this.setBackground(new Color(11, 17, 32)); // 深邃墨蓝底色
+        this.setFocusable(true);
         loadImages();
+        setupMouseListeners();
 
         controller.setOnStateChanged(state -> {
             updateMusic(state);
@@ -114,6 +131,12 @@ public class GameCanvas extends JPanel {
         int gridPixelHeight = rows * cellSize;
         int startX = (boardAreaWidth - gridPixelWidth) / 2;
         int startY = (boardAreaHeight - gridPixelHeight) / 2;
+
+        this.lastStartX = startX;
+        this.lastStartY = startY;
+        this.lastCellSize = cellSize;
+        this.lastRows = rows;
+        this.lastCols = cols;
 
         // 3. 绘制棋盘大底板
         g2.setColor(new Color(15, 23, 42));
@@ -215,6 +238,9 @@ public class GameCanvas extends JPanel {
         // 7. 绘制玩家（带高对比光圈与高光三角朝向箭头）
         drawPlayer(g2, state.getP1(), player1Img, new Color(6, 182, 212), "P1", startX, startY, cellSize, state.getCurrentTurn() == 1 && !state.isOver());
         drawPlayer(g2, state.getP2(), player2Img, new Color(245, 158, 11), "P2", startX, startY, cellSize, state.getCurrentTurn() == 2 && !state.isOver());
+
+        // 7.5 绘制鼠标悬停交互指引 (目标格高亮与朝向锁边预览箭头)
+        drawMouseHoverIndicator(g2, state, startX, startY, cellSize, rows, cols, reachableWithin3);
 
         // 8. 绘制现代化高对比度侧边栏
         drawSidebar(g2, state, boardAreaWidth, 0, sidebarWidth, totalHeight);
@@ -566,14 +592,14 @@ public class GameCanvas extends JPanel {
         int remaining = state.getRemainingSteps();
         g2.drawString(String.format("▶ %s  已走 %d 步 · 剩余 %d 步", abbreviateName(currP.getName(), 8), currentSteps, remaining), x + 14, y + 26);
 
-        // 第 2 行：战术操作指令
+        // 第 2 行：战术操作指令 (键鼠双模支持)
         g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
         if (remaining > 0) {
             g2.setColor(new Color(148, 163, 184));
-            g2.drawString("💡 WASD 移动定位 · 按 L 键封锁朝向边交权", x + 14, y + 50);
+            g2.drawString("💡 左键点击移动 · 右键定向锁边 | 或使用 WASD + L 键", x + 14, y + 50);
         } else {
             g2.setColor(new Color(251, 146, 60));
-            g2.drawString("⚠️ 步数已耗尽，请按 L 键封锁朝向边交权", x + 14, y + 50);
+            g2.drawString("⚠️ 步数已耗尽，请右键定向锁边或按 L 键交权", x + 14, y + 50);
         }
 
         return y + cardH;
@@ -590,7 +616,7 @@ public class GameCanvas extends JPanel {
         // 标题
         g2.setColor(new Color(226, 232, 240));
         g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-        g2.drawString("战局图例 & 快捷操作", x + 14, y + 20);
+        g2.drawString("战局图例 & 键鼠操作", x + 14, y + 20);
 
         // 图例色块
         int legendY = y + 42;
@@ -600,13 +626,13 @@ public class GameCanvas extends JPanel {
 
         // 快捷键指南
         int keyY = y + 68;
-        drawKeyTag(g2, x + 14, keyY, "WASD", "移动定位");
-        drawKeyTag(g2, x + 120, keyY, "L 键", "锁边交权");
+        drawKeyTag(g2, x + 14, keyY, "左键/WASD", "移动走子");
+        drawKeyTag(g2, x + 126, keyY, "右键/L键", "定向锁边");
 
         keyY += 24;
         drawKeyTag(g2, x + 14, keyY, "P 键", "寻路高亮");
-        drawKeyTag(g2, x + 120, keyY, "F11", "全屏切换");
-        drawKeyTag(g2, x + 200, keyY, "+ 键", "重置");
+        drawKeyTag(g2, x + 126, keyY, "F11", "全屏切换");
+        drawKeyTag(g2, x + 206, keyY, "+ 键", "分先");
     }
 
     private void drawKeyTag(Graphics2D g2, int x, int y, String key, String desc) {
@@ -632,5 +658,206 @@ public class GameCanvas extends JPanel {
         if (name == null) return "";
         if (name.length() <= maxLen) return name;
         return name.substring(0, maxLen - 1) + "…";
+    }
+
+    // ==========================================
+    // 鼠标交互与悬停预览系统 (v2.6 全新特性)
+    // ==========================================
+
+    private void setupMouseListeners() {
+        this.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                GameCanvas.this.requestFocusInWindow();
+                handleMouseClick(e);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoverR = -1;
+                hoverC = -1;
+                hoverDir = null;
+                repaint();
+            }
+        });
+
+        this.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                handleMouseMove(e);
+            }
+        });
+    }
+
+    private void handleMouseMove(MouseEvent e) {
+        if (lastCellSize <= 0) return;
+        int mx = e.getX();
+        int my = e.getY();
+
+        int c = (mx - lastStartX) / lastCellSize;
+        int r = (my - lastStartY) / lastCellSize;
+
+        if (r >= 0 && r < lastRows && c >= 0 && c < lastCols && mx >= lastStartX && my >= lastStartY) {
+            hoverR = r;
+            hoverC = c;
+            double cx = lastStartX + c * lastCellSize + lastCellSize / 2.0;
+            double cy = lastStartY + r * lastCellSize + lastCellSize / 2.0;
+            hoverDir = getDirectionFromOffset(mx - cx, my - cy);
+        } else {
+            hoverR = -1;
+            hoverC = -1;
+            hoverDir = null;
+        }
+        repaint();
+    }
+
+    private void handleMouseClick(MouseEvent e) {
+        if (lastCellSize <= 0) return;
+        int mx = e.getX();
+        int my = e.getY();
+
+        int c = (mx - lastStartX) / lastCellSize;
+        int r = (my - lastStartY) / lastCellSize;
+
+        if (r < 0 || r >= lastRows || c < 0 || c >= lastCols || mx < lastStartX || my < lastStartY) {
+            return;
+        }
+
+        GameState state = controller.getGameState();
+        if (state.isOver()) return;
+
+        int myPlayerId = controller.getMyPlayerId();
+        if (myPlayerId != 0 && state.getCurrentTurn() != myPlayerId) {
+            return; // 非玩家回合或AI思考中
+        }
+
+        PlayerState currP = state.getCurrentPlayer();
+        PlayerState oppP = state.getOpponentPlayer();
+        Board board = state.getBoard();
+
+        double cx = lastStartX + c * lastCellSize + lastCellSize / 2.0;
+        double cy = lastStartY + r * lastCellSize + lastCellSize / 2.0;
+        Direction clickDir = getDirectionFromOffset(mx - cx, my - cy);
+
+        if (SwingUtilities.isLeftMouseButton(e)) {
+            // 左键：移动或在当前格调整朝向
+            if (r == currP.getR() && c == currP.getC()) {
+                controller.handleUserAction(GameAction.changeDirMove(clickDir));
+            } else {
+                List<Direction> path = GameEvaluator.findPathAvoidingOpponent(
+                        board, currP.getR(), currP.getC(), r, c, oppP.getR(), oppP.getC());
+                if (!path.isEmpty()) {
+                    int distFromStart = GameEvaluator.getDistanceAvoidingOpponent(
+                            board, state.getTurnStartR(), state.getTurnStartC(), r, c, oppP.getR(), oppP.getC());
+                    if (distFromStart >= 0 && distFromStart <= currP.getEnergy()) {
+                        for (Direction step : path) {
+                            controller.handleUserAction(GameAction.changeDirMove(step));
+                        }
+                    }
+                }
+            }
+        } else if (SwingUtilities.isRightMouseButton(e)) {
+            // 右键：根据鼠标所在位置确定朝向并锁边
+            if (r == currP.getR() && c == currP.getC()) {
+                controller.handleUserAction(GameAction.lock(clickDir));
+            } else {
+                List<Direction> path = GameEvaluator.findPathAvoidingOpponent(
+                        board, currP.getR(), currP.getC(), r, c, oppP.getR(), oppP.getC());
+                int distFromStart = GameEvaluator.getDistanceAvoidingOpponent(
+                        board, state.getTurnStartR(), state.getTurnStartC(), r, c, oppP.getR(), oppP.getC());
+                if (!path.isEmpty() && distFromStart >= 0 && distFromStart <= currP.getEnergy()) {
+                    for (Direction step : path) {
+                        controller.handleUserAction(GameAction.changeDirMove(step));
+                    }
+                    controller.handleUserAction(GameAction.lock(clickDir));
+                } else {
+                    for (Direction adj : Direction.values()) {
+                        if (currP.getR() + adj.getDr() == r && currP.getC() + adj.getDc() == c) {
+                            controller.handleUserAction(GameAction.lock(adj));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static Direction getDirectionFromOffset(double dx, double dy) {
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return dx > 0 ? Direction.RIGHT : Direction.LEFT;
+        } else {
+            return dy > 0 ? Direction.DOWN : Direction.UP;
+        }
+    }
+
+    private void drawMouseHoverIndicator(Graphics2D g2, GameState state, int startX, int startY, int cellSize, int rows, int cols, Set<Long> reachable) {
+        if (state.isOver() || hoverR < 0 || hoverR >= rows || hoverC < 0 || hoverC >= cols) return;
+        int myId = controller.getMyPlayerId();
+        if (myId != 0 && state.getCurrentTurn() != myId) return;
+
+        int hx = startX + hoverC * cellSize;
+        int hy = startY + hoverR * cellSize;
+        PlayerState currP = state.getCurrentPlayer();
+        boolean isCurrentCell = (hoverR == currP.getR() && hoverC == currP.getC());
+        boolean isReachable = (reachable != null && reachable.contains(GameEvaluator.encode(hoverR, hoverC)));
+
+        if (!isCurrentCell && !isReachable) return;
+
+        Color highlightColor = (state.getCurrentTurn() == 1) ? new Color(56, 189, 248) : new Color(251, 191, 36);
+
+        // 1. 悬停目标格外边框微光
+        g2.setColor(new Color(highlightColor.getRed(), highlightColor.getGreen(), highlightColor.getBlue(), 120));
+        g2.setStroke(new BasicStroke(2.0f));
+        g2.draw(new RoundRectangle2D.Float(hx + 1, hy + 1, cellSize - 2, cellSize - 2, 6, 6));
+
+        // 2. 悬停锁边朝向预览指示 (高亮朝向边与小三角标)
+        if (hoverDir != null) {
+            drawLockPreviewIndicator(g2, hx, hy, cellSize, hoverDir, highlightColor);
+        }
+    }
+
+    private void drawLockPreviewIndicator(Graphics2D g2, int hx, int hy, int cellSize, Direction dir, Color color) {
+        float previewLineWidth = Math.max(3.0f, cellSize * 0.08f);
+        g2.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), 220));
+        g2.setStroke(new BasicStroke(previewLineWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+        int triSize = Math.max(4, cellSize / 8);
+        Path2D.Float tri = new Path2D.Float();
+
+        switch (dir) {
+            case UP -> {
+                g2.drawLine(hx + 2, hy, hx + cellSize - 2, hy);
+                int midX = hx + cellSize / 2;
+                tri.moveTo(midX, hy + 2);
+                tri.lineTo(midX - triSize, hy + 2 + triSize);
+                tri.lineTo(midX + triSize, hy + 2 + triSize);
+                tri.closePath();
+            }
+            case DOWN -> {
+                g2.drawLine(hx + 2, hy + cellSize, hx + cellSize - 2, hy + cellSize);
+                int midX = hx + cellSize / 2;
+                tri.moveTo(midX, hy + cellSize - 2);
+                tri.lineTo(midX - triSize, hy + cellSize - 2 - triSize);
+                tri.lineTo(midX + triSize, hy + cellSize - 2 - triSize);
+                tri.closePath();
+            }
+            case LEFT -> {
+                g2.drawLine(hx, hy + 2, hx, hy + cellSize - 2);
+                int midY = hy + cellSize / 2;
+                tri.moveTo(hx + 2, midY);
+                tri.lineTo(hx + 2 + triSize, midY - triSize);
+                tri.lineTo(hx + 2 + triSize, midY + triSize);
+                tri.closePath();
+            }
+            case RIGHT -> {
+                g2.drawLine(hx + cellSize, hy + 2, hx + cellSize, hy + cellSize - 2);
+                int midY = hy + cellSize / 2;
+                tri.moveTo(hx + cellSize - 2, midY);
+                tri.lineTo(hx + cellSize - 2 - triSize, midY - triSize);
+                tri.lineTo(hx + cellSize - 2 - triSize, midY + triSize);
+                tri.closePath();
+            }
+        }
+        g2.fill(tri);
     }
 }

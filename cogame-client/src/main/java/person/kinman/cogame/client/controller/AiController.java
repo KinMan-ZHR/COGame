@@ -21,6 +21,7 @@ public class AiController implements GameController {
     private final GameState state;
     private final AiStrategy aiStrategy;
     private final AiPlaystyle playstyle;
+    private final int searchDepth;
     private TurnOrderPreference preference;
     private int myPlayerId; // 1 (玩家先手 P1) 或 2 (玩家后手 P2)
     private int aiPlayerId; // 2 或 1
@@ -31,21 +32,30 @@ public class AiController implements GameController {
     private volatile boolean aiThinking = false;
 
     public AiController() {
-        this(6, AiPlaystyle.ANTIGRAVITY, TurnOrderPreference.FIRST);
+        this(6, AiPlaystyle.CE_TIAN, 5, TurnOrderPreference.FIRST);
     }
 
     public AiController(int boardSize) {
-        this(boardSize, AiPlaystyle.ANTIGRAVITY, TurnOrderPreference.FIRST);
+        this(boardSize, AiPlaystyle.CE_TIAN, 5, TurnOrderPreference.FIRST);
     }
 
     public AiController(int boardSize, AiPlaystyle playstyle) {
-        this(boardSize, playstyle, TurnOrderPreference.FIRST);
+        this(boardSize, playstyle, 5, TurnOrderPreference.FIRST);
     }
 
     public AiController(int boardSize, AiPlaystyle playstyle, TurnOrderPreference preference) {
-        this.playstyle = (playstyle != null) ? playstyle : AiPlaystyle.ANTIGRAVITY;
+        this(boardSize, playstyle, 5, preference);
+    }
+
+    public AiController(int boardSize, AiPlaystyle playstyle, int searchDepth) {
+        this(boardSize, playstyle, searchDepth, TurnOrderPreference.FIRST);
+    }
+
+    public AiController(int boardSize, AiPlaystyle playstyle, int searchDepth, TurnOrderPreference preference) {
+        this.playstyle = (playstyle != null) ? playstyle : AiPlaystyle.CE_TIAN;
+        this.searchDepth = Math.max(3, Math.min(10, searchDepth));
         this.preference = (preference != null) ? preference : TurnOrderPreference.FIRST;
-        this.aiStrategy = this.playstyle.createStrategy();
+        this.aiStrategy = this.playstyle.createStrategy(this.searchDepth);
         this.state = new GameState(boardSize);
 
         int resolvedHuman = 1;
@@ -74,6 +84,10 @@ public class AiController implements GameController {
 
     public AiPlaystyle getPlaystyle() {
         return playstyle;
+    }
+
+    public int getSearchDepth() {
+        return searchDepth;
     }
 
     public TurnOrderPreference getPreference() {
@@ -116,7 +130,7 @@ public class AiController implements GameController {
 
     private void triggerAiTurn() {
         aiThinking = true;
-        notifyNotification(playstyle.getPlayerName() + " 正在深度思考连通策略...");
+        notifyNotification(playstyle.getPlayerName() + " [深度 " + searchDepth + "] 正在推演局势...");
 
         aiExecutor.submit(() -> {
             try {
@@ -202,7 +216,7 @@ public class AiController implements GameController {
     @Override
     public String getModeName() {
         String turnStr = (myPlayerId == 1) ? "玩家先手" : "AI先手";
-        return "人机流派挑战 (" + turnStr + " · " + playstyle.getPlayerName() + ")";
+        return "人机流派挑战 (" + turnStr + " · " + playstyle.getPlayerName() + " · 深度" + searchDepth + ")";
     }
 
     @Override

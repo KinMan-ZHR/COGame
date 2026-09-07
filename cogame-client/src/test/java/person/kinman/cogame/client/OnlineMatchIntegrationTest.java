@@ -329,8 +329,14 @@ public class OnlineMatchIntegrationTest {
         Thread.sleep(100);
         playerB.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
 
-        // 等待新一局开始
-        Thread.sleep(500);
+        // 等待新一局开始并完成状态同步
+        long rematchDeadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < rematchDeadline) {
+            if (playerB.getGameState().getP1().getR() == 0 && newGameNoticeB.get() != null && newGameNoticeB.get().contains("新一局开战")) {
+                break;
+            }
+            Thread.sleep(50);
+        }
 
         // 验证分先结果：PlayerB 应当为 P1 (先手)，PlayerA 应当为 P2 (后手)
         Assertions.assertEquals(1, playerB.getMyPlayerId(), "局内选执先的 PlayerB 应当成为新局 P1");
@@ -341,11 +347,20 @@ public class OnlineMatchIntegrationTest {
         Assertions.assertEquals(0, playerB.getGameState().getP1().getC(), "新一局 P1 应当在原点 (0,0)");
 
         // 再次测试：双方在局内均申请执先 (FIRST)
+        newGameNoticeA.set(null);
+        newGameNoticeB.set(null);
         playerA.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
         Thread.sleep(100);
         playerB.resetGameWithPreference(person.kinman.cogame.core.model.TurnOrderPreference.FIRST);
 
-        Thread.sleep(500);
+        long rematch2Deadline = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < rematch2Deadline) {
+            if (newGameNoticeA.get() != null && newGameNoticeA.get().contains("新一局开战")
+                    && newGameNoticeB.get() != null && newGameNoticeB.get().contains("新一局开战")) {
+                break;
+            }
+            Thread.sleep(50);
+        }
 
         // 系统掷骰裁决：双方一人为1一人为2
         Assertions.assertTrue((playerA.getMyPlayerId() == 1 && playerB.getMyPlayerId() == 2)
