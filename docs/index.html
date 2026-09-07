@@ -401,8 +401,9 @@
         <div class="card">
             <h2>🚀 各平台客户端运行与控制指南</h2>
             <div style="font-size: 14px; line-height: 1.8; color: #cbd5e1; margin-bottom: 16px;">
-                <p><strong>🪟 Windows 玩家</strong>：下载 <code>COGame-Client.exe</code> 后直接双击即可秒开游戏，无需手动执行任何终端命令！</p>
-                <p><strong>🍎 macOS 玩家</strong>：下载 <code>COGame-macOS.zip</code> 解压后直接双击 <code>COGame.app</code>（若遇系统安全提示，请右键选择「打开」或直接双击 <code>Start-COGame.command</code> 启动）。</p>
+                <p><strong>🍎 macOS 玩家</strong>：下载 <code>COGame-macOS.zip</code> 解压后：<br>
+                • <strong>推荐（最省心）</strong>：直接双击解压出的 <code>Start-COGame.command</code> 启动引导器（会自动解除 macOS 隔离并秒级调起游戏）；<br>
+                • <strong>直接双击 App</strong>：双击 <code>COGame.app</code> 启动。若遇到系统提示「已损坏」或「无法验证开发者」（苹果对网络下载未签名软件的安全拦截），只需在终端执行 <code>xattr -cr COGame.app</code>，或在 Mac「系统设置 ➔ 隐私与安全性」最下方点击「仍要打开」即可。</p>
                 <p><strong>🐧 Linux / 跨平台</strong>：下载 <code>COGame-Client.jar</code>，在终端执行：</p>
             </div>
             <pre>java -jar COGame-Client.jar</pre>

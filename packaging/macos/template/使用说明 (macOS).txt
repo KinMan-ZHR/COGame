@@ -1,17 +1,29 @@
 COGame - 《端脑》隔断棋盘博弈 (macOS 专属版本)
 =================================================
 
-【运行方法】
-方法 1 (推荐)：
-  直接双击 COGame.app 启动游戏。
-  若提示「无法打开，因为来自未知的开发者」：
-  请在 COGame.app 上右键（或按住 Control 键点按）-> 选择「打开」即可。
+【遇到「已损坏，无法打开」或「无法验证开发者」？】
+由于苹果 macOS Gatekeeper 对从浏览器下载的未签名开源软件有强隔离保护（com.apple.quarantine）：
 
-方法 2 (备用免限制)：
-  直接双击「Start-COGame.command」脚本即可秒开。
+【极速启动方案】
+
+方案 1（一键自动解除限制，最推荐）：
+  直接双击同目录下的「Start-COGame.command」！
+  该脚本会自动为您解除隔离限制、精准定位 Java 17+ 并秒级启动游戏。
+
+方案 2（解除 COGame.app 隔离，以后直接双击 app）：
+  打开终端（Terminal），将以下命令复制执行：
+  xattr -cr /你的解压路径/COGame.app
+  （也可以直接在终端输入 xattr -cr ，然后把 COGame.app 拖入终端按回车）
+  执行后，COGame.app 即可随时双击秒开！
+
+方案 3（macOS 系统设置放行）：
+  打开 Mac「系统设置」->「隐私与安全性」-> 滑动到最下方，
+  找到「已阻止 COGame.app...」，点击「仍要打开」即可。
 
 【运行环境要求】
   需安装 Java 17 或更高版本。
-  如未安装，启动时会自动弹出下载指引，或通过 Homebrew 安装：
+  如未安装，可通过 Homebrew 安装：
   brew install openjdk@17
+  或前往 Adoptium 官网安装 Temurin 17：
+  https://adoptium.net/temurin/releases/?version=17
 =================================================
