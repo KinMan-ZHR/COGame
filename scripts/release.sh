@@ -79,6 +79,11 @@ shutil.move(temp_zip, zip_path)
 "
 fi
 
+# 同步更新 GitHub Pages 静态主页 docs/
+mkdir -p "${PROJECT_ROOT}/docs"
+cp "${PROJECT_ROOT}/distribution/index.html" "${PROJECT_ROOT}/docs/index.html"
+echo "🌐 同步 GitHub Pages 静态主页 (docs/index.html)..."
+
 # 6. Git 标签处理
 echo "🏷️  [4/5] 检查并创建 Git Tag: ${TAG_NAME}..."
 if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
