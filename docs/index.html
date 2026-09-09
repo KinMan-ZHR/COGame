@@ -294,9 +294,9 @@
         <!-- 下载卡片 -->
         <div class="card download-box">
             <div class="download-actions">
-                <a href="COGame-Client.exe" class="btn-download-win" download>
+                <a href="COGame-Windows-x64.zip" class="btn-download-win" download>
                     <svg viewBox="0 0 24 24"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.949-1.801"/></svg>
-                    Windows 专属版 (.exe)
+                    Windows 独立免安装版 (.zip / 内置环境无需Java)
                 </a>
                 <a href="COGame-macOS.zip" class="btn-download-mac" download>
                     <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.47c.68-.82 1.13-1.96.99-3.11-1 .04-2.22.67-2.92 1.48-.62.72-1.16 1.88-1.02 3 .02 0 .04 0 .06 0 1.05 0 2.21-.57 2.89-1.37z"/></svg>
@@ -308,7 +308,10 @@
                 </a>
             </div>
             <div class="file-info">
-                <strong>版本：v2.6.0 正式版</strong> | 🪟 Windows (双击 .exe) | 🍎 macOS (解压后双击 COGame.app) | 🐧 Linux / 通用 (Java 17+)
+                <strong>版本：v2.6.0 正式版</strong> | 🪟 Windows (下载解压直接双击 <code>COGame.exe</code>，小白开箱即玩无需Java) | 🍎 macOS (解压后双击 <code>COGame.app</code>) | 🐧 Linux / 极客通用 (Java 17+)
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
+                备用微型启动器：<a href="COGame-Client.exe" style="color: var(--neon-blue); text-decoration: underline;">COGame-Client.exe (20MB，需系统安装 Java 17+)</a>
             </div>
             <div class="server-status">
                 <span class="status-dot"></span>
@@ -401,10 +404,9 @@
         <div class="card">
             <h2>🚀 各平台客户端运行与控制指南</h2>
             <div style="font-size: 14px; line-height: 1.8; color: #cbd5e1; margin-bottom: 16px;">
-                <p><strong>🍎 macOS 玩家</strong>：下载 <code>COGame-macOS.zip</code> 解压后：<br>
-                • <strong>推荐（最省心）</strong>：直接双击解压出的 <code>Start-COGame.command</code> 启动引导器（会自动解除 macOS 隔离并秒级调起游戏）；<br>
-                • <strong>直接双击 App</strong>：双击 <code>COGame.app</code> 启动。若遇到系统提示「已损坏」或「无法验证开发者」（苹果对网络下载未签名软件的安全拦截），只需在终端执行 <code>xattr -cr COGame.app</code>，或在 Mac「系统设置 ➔ 隐私与安全性」最下方点击「仍要打开」即可。</p>
-                <p><strong>🐧 Linux / 跨平台</strong>：下载 <code>COGame-Client.jar</code>，在终端执行：</p>
+                <p><strong>🪟 Windows 玩家 (小白强烈推荐)</strong>：下载 <code>COGame-Windows-x64.zip</code> 解压后，直接双击运行 <code>COGame.exe</code> 即可秒开游戏！已内置精简专用运行环境，<strong>完全无需安装任何 Java 或 JRE</strong>！若本地已有 Java 17+ 环境，亦可下载单体 <code>COGame-Client.exe</code> 运行。</p>
+                <p><strong>🍎 macOS 玩家</strong>：下载 <code>COGame-macOS.zip</code> 解压后直接双击 <code>COGame.app</code>（若遇系统安全提示，请右键选择「打开」或直接双击 <code>Start-COGame.command</code> 启动）。</p>
+                <p><strong>🐧 Linux / 极客玩家</strong>：下载 <code>COGame-Client.jar</code>，在终端执行：</p>
             </div>
             <pre>java -jar COGame-Client.jar</pre>
             

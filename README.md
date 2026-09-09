@@ -31,11 +31,16 @@ COGame/
 │   ├── ui/                 # MainMenuFrame(模式选择), GameCanvas(对战面板), GameFrame
 │   └── ClientMain.java     # 客户端启动入口 (支持全量 Fat JAR 打包)
 │
-├── distribution/           # 客户端 Web 分发目录 (一键下载网页与可执行 JAR)
+├── distribution/           # 客户端 Web 分发目录 (一键下载网页与各端发行包)
 │   ├── index.html          # 极简现代化下载与规则说明页
-│   └── COGame-Client.jar   # 打包生成的免安装全量客户端 (约 63MB)
+│   ├── COGame-Windows-x64.zip # Windows 独立免安装版 (内置精简运行时，小白解压即玩无需Java)
+│   ├── COGame-Client.exe   # Windows 轻量启动器 (需本地 Java 17+)
+│   ├── COGame-macOS.zip    # macOS 原生 .app 专属包
+│   └── COGame-Client.jar   # 跨平台通用全量客户端
 │
-└── scripts/                # 服务运维管理脚本
+└── scripts/                # 构建与运维管理脚本
+    ├── package-windows.ps1 # Windows 专属独立免安装包自动化打包脚本 (jlink + jpackage)
+    ├── release.sh          # Linux/macOS 自动化发布脚本
     ├── start-server.sh     # 启动 WebSocket 联机服务端 (tmux 守护进程)
     ├── stop-server.sh      # 停止 WebSocket 联机服务端
     ├── status-server.sh    # 查询联机服务端运行状态
@@ -97,13 +102,18 @@ COGame/
 
 用户访问 `http://<服务器IP>:8080/` 即可直接查看游戏介绍并一键下载 `COGame-Client.jar`。
 
-### 3. 项目重新编译与测试
+### 3. 项目编译、测试与独立打包
 ```bash
 # 执行全部单元测试与联机端到端集成测试
 mvn test
 
 # 打包所有模块与全量 Fat JAR
 mvn clean package
+```
+
+```powershell
+# Windows 专属：一键生成独立免安装绿色版 (内置精简 JRE，开箱即玩无需 Java)
+.\scripts\package-windows.ps1
 ```
 
 ---

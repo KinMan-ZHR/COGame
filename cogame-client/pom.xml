@@ -80,9 +80,10 @@
                             <headerType>gui</headerType>
                             <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
                             <outfile>${project.build.directory}/COGame-Client.exe</outfile>
+                            <icon>${project.basedir}/../packaging/windows/cogame.ico</icon>
                             <downloadUrl>https://adoptium.net/temurin/releases/?version=17</downloadUrl>
                             <jre>
-                                <path>%JAVA_HOME%;%PATH%</path>
+                                <path>runtime;%JAVA_HOME%;%PATH%</path>
                                 <minVersion>17</minVersion>
                                 <requiresJdk>false</requiresJdk>
                                 <opts>
@@ -90,12 +91,12 @@
                                 </opts>
                             </jre>
                             <versionInfo>
-                                <fileVersion>2.5.0.0</fileVersion>
-                                <txtFileVersion>2.5.0</txtFileVersion>
+                                <fileVersion>2.6.0.0</fileVersion>
+                                <txtFileVersion>2.6.0</txtFileVersion>
                                 <fileDescription>COGame - 《端脑》隔断棋盘博弈客户端</fileDescription>
                                 <copyright>Kinman</copyright>
-                                <productVersion>2.5.0.0</productVersion>
-                                <txtProductVersion>2.5.0</txtProductVersion>
+                                <productVersion>2.6.0.0</productVersion>
+                                <txtProductVersion>2.6.0</txtProductVersion>
                                 <productName>COGame</productName>
                                 <internalName>COGame-Client</internalName>
                                 <originalFilename>COGame-Client.exe</originalFilename>
