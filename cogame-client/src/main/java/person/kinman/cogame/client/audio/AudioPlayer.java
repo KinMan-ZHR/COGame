@@ -40,6 +40,34 @@ public class AudioPlayer {
         }, "COGame-Audio-Thread").start();
     }
 
+    public static synchronized void playOnce(String resourceName) {
+        if (resourceName == null || resourceName.equals(currentMusicName)) {
+            return;
+        }
+
+        stopMusic();
+
+        new Thread(() -> {
+            try {
+                InputStream is = AudioPlayer.class.getClassLoader().getResourceAsStream(resourceName);
+                if (is == null) return;
+
+                BufferedInputStream bis = new BufferedInputStream(is);
+                AudioInputStream ais = AudioSystem.getAudioInputStream(bis);
+                Clip clip = AudioSystem.getClip();
+                clip.open(ais);
+                clip.start();
+
+                synchronized (AudioPlayer.class) {
+                    currentClip = clip;
+                    currentMusicName = resourceName;
+                }
+            } catch (Throwable t) {
+                // 静默降级
+            }
+        }, "COGame-Audio-Thread").start();
+    }
+
     public static synchronized void stopMusic() {
         if (currentClip != null) {
             try {

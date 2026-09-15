@@ -85,14 +85,33 @@ public class GameCanvas extends JPanel {
 
     private void updateMusic(GameState state) {
         if (state.isOver()) {
-            AudioPlayer.playMusic("Brand X Music - Get Bent.wav");
+            AudioPlayer.playOnce("theme_victory.wav");
         } else {
-            if (state.getCurrentTurn() == 1) {
-                AudioPlayer.playMusic("Varien-Future Funk.wav");
+            int lockedEdges = countLockedEdges(state.getBoard());
+            // 当棋盘封锁边数达到 8 条以上时，关键通道收紧，进入后盘紧张博弈变奏
+            if (lockedEdges >= 8) {
+                AudioPlayer.playMusic("theme_tense.wav");
             } else {
-                AudioPlayer.playMusic("imagine dragonslil wayne - believer.wav");
+                AudioPlayer.playMusic("theme_peace.wav");
             }
         }
+    }
+
+    private int countLockedEdges(Board board) {
+        int count = 0;
+        boolean[][] hEdge = board.gethEdge();
+        boolean[][] vEdge = board.getvEdge();
+        for (int r = 0; r < board.getRows(); r++) {
+            for (int c = 0; c < board.getCols() - 1; c++) {
+                if (!hEdge[r][c]) count++;
+            }
+        }
+        for (int r = 0; r < board.getRows() - 1; r++) {
+            for (int c = 0; c < board.getCols(); c++) {
+                if (!vEdge[r][c]) count++;
+            }
+        }
+        return count;
     }
 
     public void toggleShowPath() {
