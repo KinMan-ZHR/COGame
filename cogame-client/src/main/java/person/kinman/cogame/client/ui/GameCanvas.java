@@ -121,7 +121,7 @@ public class GameCanvas extends JPanel {
 
     /**
      * 智能评估棋盘对局紧张态（全规格自适应：6x6~13x13）
-     * 摆脱机械硬编码步数或边数，基于图论拓扑结构、物理连通性、近身博弈与割边危机动态判定
+     * 设定开局保护期与动态图论张力评估，避免小棋盘前几回合过早变奏，确保开局思考充分沉浸
      */
     public static boolean isTenseSituation(GameState state) {
         Board board = state.getBoard();
@@ -132,48 +132,55 @@ public class GameCanvas extends JPanel {
         if (p1 == null || p2 == null) return false;
 
         int playerWalls = countPlayerLockedEdges(board);
-        // 开局没有任何玩家落子前，处于深思起手阶段，保持平和
-        if (playerWalls == 0) {
+        int rows = board.getRows();
+        int cols = board.getCols();
+        int totalEdges = rows * (cols - 1) + (rows - 1) * cols;
+
+        // 计算各尺寸棋盘开局保护阈值（避免开局数步内仓促变奏破坏起手沉思感）
+        // 6x6: 至少8条玩家锁边 (约4轮博弈后); 9x9: 14条; 12x12: 20条
+        int minPlayerWalls = Math.max(8, (rows + cols) - 4);
+
+        int p1Degree = board.getOpenDirections(p1.getR(), p1.getC()).size();
+        int p2Degree = board.getOpenDirections(p2.getR(), p2.getC()).size();
+
+        // 连通最短物理距离
+        List<int[]> path = GameEvaluator.findPath(board, p1.getR(), p1.getC(), p2.getR(), p2.getC());
+        if (path.isEmpty()) {
+            return true; // 已无通路（处于终局边缘）
+        }
+        int pathDistance = path.size() - 1;
+
+        // 1. 致命伏击危机：任一方仅剩 <= 1 出口，且对手已近身 <= 3 步具备直接关门斩杀能力（需至少4条玩家墙体）
+        if ((p1Degree <= 1 || p2Degree <= 1) && pathDistance <= 3 && playerWalls >= 4) {
+            return true;
+        }
+
+        // 开局布局保护期：未累积足够的博弈墙体时，严格保持静心推演平和曲
+        if (playerWalls < minPlayerWalls) {
             return false;
         }
 
-        // 1. 危机出度判定（任一方有效出度 <= 1，陷入死胡同绝境）
-        int p1Degree = board.getOpenDirections(p1.getR(), p1.getC()).size();
-        int p2Degree = board.getOpenDirections(p2.getR(), p2.getC()).size();
-        if (p1Degree <= 1 || p2Degree <= 1) {
+        // --- 进入中后盘（playerWalls >= minPlayerWalls）后的危机深度判定 ---
+
+        // 2. 近身缠斗肉搏：双方物理距离 <= 2 步（已直接进入面对面刺杀与封堵射程）
+        if (pathDistance <= 2) {
             return true;
         }
 
-        // 计算双方在图上的最短物理通路距离
-        List<int[]> path = GameEvaluator.findPath(board, p1.getR(), p1.getC(), p2.getR(), p2.getC());
-        if (path.isEmpty()) {
-            return true; // 已无通路（处于终局判定边缘）
-        }
-
-        int pathDistance = path.size() - 1;
-
-        // 2. 近身肉搏战：双方最短路径 <= 3 步（单回合极限移动距离内，直接面临碰撞或截断）
-        if (pathDistance <= 3) {
+        // 3. 走廊截杀对峙：双方距离 <= 3 步且至少一方处于窄道 (出度 <= 2)
+        if (pathDistance <= 3 && (p1Degree <= 2 || p2Degree <= 2)) {
             return true;
         }
 
-        // 3. 狭窄走廊对峙：距离 <= 5 步且任一方处于窄道（出度 <= 2）
-        if (pathDistance <= 5 && (p1Degree <= 2 || p2Degree <= 2)) {
+        // 4. 决胜割边威胁：双方距离进入威胁范围 (<= 4 步)，且最短路径上存在一锁即绝杀的致命割边
+        if (pathDistance <= 4 && hasCriticalBridgeAlongPath(board, path, p1.getR(), p1.getC(), p2.getR(), p2.getC())) {
             return true;
         }
 
-        // 4. 关键枢纽割边（Bridge）判定：双方距离进入威胁范围 (<= 6 步)，且最短路径上存在一锁即绝杀的枢纽边
-        if (pathDistance <= 6 && hasCriticalBridgeAlongPath(board, path, p1.getR(), p1.getC(), p2.getR(), p2.getC())) {
-            return true;
-        }
-
-        // 5. 棋盘白热化饱和度：过滤中立预置障碍，仅统计玩家主动锁边占比
-        int totalEdges = board.getRows() * (board.getCols() - 1) + (board.getRows() - 1) * board.getCols();
+        // 5. 残局高饱和度：玩家主动封锁边数达全盘 18% 以上，且双方进入收敛半区
         double playerWallRatio = (double) playerWalls / Math.max(1, totalEdges);
-        int boardHalfPerimeter = (board.getRows() + board.getCols()) / 2;
-
-        // 当玩家主动锁边达到全盘 14% 且双方距离收缩至半周长以内时进入高潮
-        if (playerWallRatio >= 0.14 && pathDistance <= boardHalfPerimeter) {
+        int boardHalfPerimeter = (rows + cols) / 2;
+        if (playerWallRatio >= 0.18 && pathDistance <= boardHalfPerimeter) {
             return true;
         }
 
