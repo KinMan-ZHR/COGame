@@ -33,6 +33,7 @@ public class GameCanvas extends JPanel {
     private Image player2Img;
     private boolean showPath = false;
     private String statusNotification = "";
+    private boolean inTenseMode = false;
 
     // 鼠标交互与悬停预览状态
     private int hoverR = -1;
@@ -84,33 +85,161 @@ public class GameCanvas extends JPanel {
     }
 
     private void updateMusic(GameState state) {
+        if (state == null) return;
+
         if (state.isOver()) {
+            inTenseMode = false;
             AudioPlayer.playOnce("theme_victory.wav");
+            return;
+        }
+
+        // 新开局或重新开始时重置紧张态
+        int playerWalls = countPlayerLockedEdges(state.getBoard());
+        if (playerWalls == 0 && !isTenseSituation(state)) {
+            inTenseMode = false;
+        }
+
+        // 紧张态单向递进：一旦触发即持续保持紧张变奏直至终局，防止拉扯回退破坏听感
+        if (!inTenseMode && isTenseSituation(state)) {
+            inTenseMode = true;
+        }
+
+        if (inTenseMode) {
+            AudioPlayer.playMusic("theme_tense.wav");
         } else {
-            int lockedEdges = countLockedEdges(state.getBoard());
-            // 当棋盘封锁边数达到 8 条以上时，关键通道收紧，进入后盘紧张博弈变奏
-            if (lockedEdges >= 8) {
-                AudioPlayer.playMusic("theme_tense.wav");
-            } else {
-                AudioPlayer.playMusic("theme_peace.wav");
-            }
+            AudioPlayer.playMusic("theme_peace.wav");
         }
     }
 
-    private int countLockedEdges(Board board) {
+    public boolean isInTenseMode() {
+        return inTenseMode;
+    }
+
+    public void updateMusicForTesting(GameState state) {
+        updateMusic(state);
+    }
+
+    /**
+     * 智能评估棋盘对局紧张态（全规格自适应：6x6~13x13）
+     * 摆脱机械硬编码步数或边数，基于图论拓扑结构、物理连通性、近身博弈与割边危机动态判定
+     */
+    public static boolean isTenseSituation(GameState state) {
+        Board board = state.getBoard();
+        if (board == null) return false;
+
+        PlayerState p1 = state.getP1();
+        PlayerState p2 = state.getP2();
+        if (p1 == null || p2 == null) return false;
+
+        int playerWalls = countPlayerLockedEdges(board);
+        // 开局没有任何玩家落子前，处于深思起手阶段，保持平和
+        if (playerWalls == 0) {
+            return false;
+        }
+
+        // 1. 危机出度判定（任一方有效出度 <= 1，陷入死胡同绝境）
+        int p1Degree = board.getOpenDirections(p1.getR(), p1.getC()).size();
+        int p2Degree = board.getOpenDirections(p2.getR(), p2.getC()).size();
+        if (p1Degree <= 1 || p2Degree <= 1) {
+            return true;
+        }
+
+        // 计算双方在图上的最短物理通路距离
+        List<int[]> path = GameEvaluator.findPath(board, p1.getR(), p1.getC(), p2.getR(), p2.getC());
+        if (path.isEmpty()) {
+            return true; // 已无通路（处于终局判定边缘）
+        }
+
+        int pathDistance = path.size() - 1;
+
+        // 2. 近身肉搏战：双方最短路径 <= 3 步（单回合极限移动距离内，直接面临碰撞或截断）
+        if (pathDistance <= 3) {
+            return true;
+        }
+
+        // 3. 狭窄走廊对峙：距离 <= 5 步且任一方处于窄道（出度 <= 2）
+        if (pathDistance <= 5 && (p1Degree <= 2 || p2Degree <= 2)) {
+            return true;
+        }
+
+        // 4. 关键枢纽割边（Bridge）判定：双方距离进入威胁范围 (<= 6 步)，且最短路径上存在一锁即绝杀的枢纽边
+        if (pathDistance <= 6 && hasCriticalBridgeAlongPath(board, path, p1.getR(), p1.getC(), p2.getR(), p2.getC())) {
+            return true;
+        }
+
+        // 5. 棋盘白热化饱和度：过滤中立预置障碍，仅统计玩家主动锁边占比
+        int totalEdges = board.getRows() * (board.getCols() - 1) + (board.getRows() - 1) * board.getCols();
+        double playerWallRatio = (double) playerWalls / Math.max(1, totalEdges);
+        int boardHalfPerimeter = (board.getRows() + board.getCols()) / 2;
+
+        // 当玩家主动锁边达到全盘 14% 且双方距离收缩至半周长以内时进入高潮
+        if (playerWallRatio >= 0.14 && pathDistance <= boardHalfPerimeter) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 探测最短路径上是否存在一击定胜负的关键割边（Bridge）
+     */
+    public static boolean hasCriticalBridgeAlongPath(Board board, List<int[]> path, int p1R, int p1C, int p2R, int p2C) {
+        if (path == null || path.size() < 2) return false;
+
+        // 使用棋盘深拷贝进行沙盒模拟，避免干扰实际游戏状态与渲染
+        Board simBoard = board.copy();
+        for (int i = 0; i < path.size() - 1; i++) {
+            int[] from = path.get(i);
+            int[] to = path.get(i + 1);
+            Direction dir = getDirectionBetween(from[0], from[1], to[0], to[1]);
+            if (dir == null) continue;
+
+            if (simBoard.lockEdge(from[0], from[1], dir, 1)) {
+                boolean cutOff = !GameEvaluator.hasPath(simBoard, p1R, p1C, p2R, p2C);
+                simBoard.unlockEdge(from[0], from[1], dir);
+                if (cutOff) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static Direction getDirectionBetween(int r1, int c1, int r2, int c2) {
+        if (r2 == r1 - 1 && c2 == c1) return Direction.UP;
+        if (r2 == r1 + 1 && c2 == c1) return Direction.DOWN;
+        if (r2 == r1 && c2 == c1 - 1) return Direction.LEFT;
+        if (r2 == r1 && c2 == c1 + 1) return Direction.RIGHT;
+        return null;
+    }
+
+    /**
+     * 仅统计由玩家（P1/P2）主动放置的墙体数量，彻底排除中立预置障碍（owner == 3）
+     */
+    public static int countPlayerLockedEdges(Board board) {
+        if (board == null) return 0;
         int count = 0;
-        boolean[][] hEdge = board.gethEdge();
-        boolean[][] vEdge = board.getvEdge();
+        int[][] hOwner = board.gethEdgeOwner();
+        int[][] vOwner = board.getvEdgeOwner();
+
         for (int r = 0; r < board.getRows(); r++) {
             for (int c = 0; c < board.getCols() - 1; c++) {
-                if (!hEdge[r][c]) count++;
+                int owner = hOwner[r][c];
+                if (owner == 1 || owner == 2) {
+                    count++;
+                }
             }
         }
+
         for (int r = 0; r < board.getRows() - 1; r++) {
             for (int c = 0; c < board.getCols(); c++) {
-                if (!vEdge[r][c]) count++;
+                int owner = vOwner[r][c];
+                if (owner == 1 || owner == 2) {
+                    count++;
+                }
             }
         }
+
         return count;
     }
 
