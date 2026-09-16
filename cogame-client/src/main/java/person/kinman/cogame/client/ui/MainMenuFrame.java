@@ -21,7 +21,7 @@ public class MainMenuFrame extends JFrame {
     private final JComboBox<String> boardSizeComboBox;
 
     public MainMenuFrame() {
-        this.setTitle("COGame - 《端脑》隔断棋盘博弈 (Ver 2.5)");
+        this.setTitle("COGame - 《端脑》隔断棋盘博弈 (v2.7.0 OST上线版)");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(580, 580);
         this.setLocationRelativeTo(null);

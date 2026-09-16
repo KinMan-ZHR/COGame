@@ -101,8 +101,8 @@ public class GameCanvas extends JPanel {
 
         if (state.isOver()) {
             inTenseMode = false;
-            // 终局结算与赛后复盘：全面进入悠闲舒缓的放松循环音乐（一直放松，直到离开此局或点击开启下一局）
-            AudioPlayer.playMusic("theme_peace.wav");
+            // 终局胜利与赛后复盘：持续循环放送，绝不戛然而止，无论是否点击复盘均一直放送，直到离开此局或开启新一局
+            AudioPlayer.playMusic("theme_victory.wav");
             return;
         }
 

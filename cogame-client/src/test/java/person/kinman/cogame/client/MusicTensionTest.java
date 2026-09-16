@@ -100,12 +100,12 @@ public class MusicTensionTest {
         state.setOver(true);
         canvas.updateMusicForTesting(state);
         Assertions.assertFalse(canvas.isInTenseMode(), "终局后重置紧张态");
-        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
-                "终局后无论是否复盘，持续循环播放悠闲舒缓的放松音乐，直到离开或开启新一局");
+        Assertions.assertEquals("theme_victory.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "终局后无论是否复盘，持续循环放送终局胜利与复盘推演主题，直到离开或开启新一局");
     }
 
     @Test
-    public void testGameOverMusicContinuousRelaxation() {
+    public void testGameOverMusicContinuousBroadcasting() {
         person.kinman.cogame.client.controller.LocalController controller = new person.kinman.cogame.client.controller.LocalController(6);
         GameCanvas canvas = new GameCanvas(controller);
         GameState state = controller.getGameState();
@@ -116,26 +116,26 @@ public class MusicTensionTest {
         Assertions.assertTrue(canvas.isInTenseMode());
         Assertions.assertEquals("theme_tense.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName());
 
-        // 对局结束（不点复盘状态）：立即切换到放松音乐，并保持循环
+        // 对局结束（不点复盘状态）：立即切换到终局胜利与复盘曲，并保持无限循环放送
         state.setOver(true);
         canvas.updateMusicForTesting(state);
         Assertions.assertFalse(canvas.isInTenseMode());
-        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
-                "终局后必须一直播放放松音乐");
+        Assertions.assertEquals("theme_victory.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "终局后无论是否点复盘，必须一直循环放送终局复盘音乐");
 
-        // 激活复盘模式：继续保持放松音乐
+        // 激活复盘模式：继续保持终局胜利复盘音乐
         canvas.getReplayManager().setReplayMode(true);
         canvas.updateMusicForTesting(state);
-        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
-                "复盘推演期间持续放松");
+        Assertions.assertEquals("theme_victory.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "复盘推演期间持续循环放送");
 
-        // 退出复盘模式回到终局盘面：继续保持放松音乐
+        // 退出复盘模式回到终局盘面：继续保持终局胜利复盘音乐
         canvas.getReplayManager().setReplayMode(false);
         canvas.updateMusicForTesting(state);
-        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
-                "退出复盘依然一直放松");
+        Assertions.assertEquals("theme_victory.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "退出复盘依然一直放送");
 
-        // 开启新一局：重置棋盘并继续以放松平和音乐开启
+        // 开启新一局：重置棋盘并平稳切换回对局平和音乐
         controller.resetGame();
         canvas.updateMusicForTesting(controller.getGameState());
         Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),

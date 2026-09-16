@@ -316,7 +316,7 @@ public class OnlineLobbyFrame extends JFrame {
 
         RoomSummaryDto room = currentRooms.get(selectedRow);
         if ("PLAYING".equals(room.getStatus()) || room.getPlayerCount() >= 2) {
-            showDarkAlert("房间已满", "该房间正在激烈对战中！\n提示：实时观战系统将于 v2.5 版本正式开放！");
+            showDarkAlert("房间已满", "该房间正在激烈对战中！\n提示：实时观战系统将于后续版本正式开放！");
             return;
         }
 
