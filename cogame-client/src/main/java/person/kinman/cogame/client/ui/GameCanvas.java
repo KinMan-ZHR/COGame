@@ -3,6 +3,8 @@ package person.kinman.cogame.client.ui;
 import person.kinman.cogame.client.audio.AudioPlayer;
 import person.kinman.cogame.client.controller.GameController;
 import person.kinman.cogame.client.controller.OnlineController;
+import person.kinman.cogame.client.replay.ReplayManager;
+import person.kinman.cogame.client.replay.TurnSnapshot;
 import person.kinman.cogame.core.action.GameAction;
 import person.kinman.cogame.core.model.Board;
 import person.kinman.cogame.core.model.Direction;
@@ -26,9 +28,11 @@ import java.util.Set;
 /**
  * 游戏核心画板：支持 6x6~13x13 动态规格、自适应窗口/全屏缩放与高对比度现代暗色视觉
  * v2.6 全新支持鼠标交互：左键点击目标格移动、右键象限判定朝向锁边与实时悬停预览指引
+ * v2.7 全新支持终局复盘：逐手推演、移动轨迹高亮、锁边力场辉光与战术解析
  */
 public class GameCanvas extends JPanel {
     private final GameController controller;
+    private final ReplayManager replayManager = new ReplayManager();
     private Image player1Img;
     private Image player2Img;
     private boolean showPath = false;
@@ -52,7 +56,11 @@ public class GameCanvas extends JPanel {
         loadImages();
         setupMouseListeners();
 
+        replayManager.reset(controller.getGameState());
+        replayManager.addListener(rm -> repaint());
+
         controller.setOnStateChanged(state -> {
+            replayManager.onStateChanged(state);
             updateMusic(state);
             repaint();
         });
@@ -63,6 +71,10 @@ public class GameCanvas extends JPanel {
         });
 
         updateMusic(controller.getGameState());
+    }
+
+    public ReplayManager getReplayManager() {
+        return replayManager;
     }
 
     private void loadImages() {
@@ -89,7 +101,8 @@ public class GameCanvas extends JPanel {
 
         if (state.isOver()) {
             inTenseMode = false;
-            AudioPlayer.playOnce("theme_victory.wav");
+            // 终局胜利与复盘主题：连续循环播放，绝不在玩家复盘思考时戛然而止
+            AudioPlayer.playMusic("theme_victory.wav");
             return;
         }
 
@@ -188,7 +201,17 @@ public class GameCanvas extends JPanel {
         int totalWidth = getWidth();
         int totalHeight = getHeight();
 
-        GameState state = controller.getGameState();
+        GameState state;
+        TurnSnapshot replaySnap = null;
+        if (replayManager.isReplayMode()) {
+            replaySnap = replayManager.getCurrentSnapshot();
+            state = (replaySnap != null && replaySnap.getStateSnapshot() != null)
+                    ? replaySnap.getStateSnapshot()
+                    : controller.getGameState();
+        } else {
+            state = controller.getGameState();
+        }
+
         Board board = state.getBoard();
         int rows = board.getRows();
         int cols = board.getCols();
@@ -231,9 +254,9 @@ public class GameCanvas extends JPanel {
                     state.getP2().getR(), state.getP2().getC());
         }
 
-        // 计算当前回合玩家在当前能量步数限制内的可达格子 (避开对手身位)
+        // 计算当前回合玩家在当前能量步数限制内的可达格子 (避开对手身位，复盘模式下关闭)
         Set<Long> reachableWithin3 = null;
-        if (!state.isOver()) {
+        if (!state.isOver() && !replayManager.isReplayMode()) {
             PlayerState currP = state.getCurrentPlayer();
             PlayerState oppP = state.getOpponentPlayer();
             reachableWithin3 = GameEvaluator.getReachableWithinSteps(
@@ -243,7 +266,7 @@ public class GameCanvas extends JPanel {
 
         // 5. 绘制所有格子单元
         int fontSize = Math.max(10, (int) (cellSize * 0.28));
-        Font cellFont = new Font("Consolas", Font.BOLD, fontSize);
+        Font cellFont = FontHelper.getMonospaceFont(Font.BOLD, fontSize);
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
@@ -289,7 +312,7 @@ public class GameCanvas extends JPanel {
 
                 // 绘制低饱和度精致格子编号 (微弱暗灰字，彻底降噪)
                 g2.setColor(new Color(100, 116, 139, 85));
-                g2.setFont(new Font("Consolas", Font.PLAIN, Math.max(9, (int) (cellSize * 0.22))));
+                g2.setFont(FontHelper.getMonospaceFont(Font.PLAIN, Math.max(9, (int) (cellSize * 0.22))));
                 int cellIndex = r * cols + 1 + c;
                 g2.drawString(String.valueOf(cellIndex), cx + 5, cy + fontSize + 2);
             }
@@ -313,15 +336,27 @@ public class GameCanvas extends JPanel {
             }
         }
 
+        // 6.5 若处于复盘推演模式，绘制本手关键动作：移动轨迹虚线箭头与锁边力场辉光
+        if (replaySnap != null && replaySnap.getMoveIndex() > 0) {
+            drawReplayMoveTrajectory(g2, replaySnap, startX, startY, cellSize);
+            if (replaySnap.hasLockedEdge()) {
+                drawReplayLockedEdgeHighlight(g2, startX, startY, cellSize,
+                        replaySnap.getLockedEdgeR(), replaySnap.getLockedEdgeC(),
+                        replaySnap.getLockedDirection(), lockedEdgeWidth);
+            }
+        }
+
         // 7. 绘制玩家（带高对比光圈与高光三角朝向箭头）
         drawPlayer(g2, state.getP1(), player1Img, new Color(6, 182, 212), "P1", startX, startY, cellSize, state.getCurrentTurn() == 1 && !state.isOver());
         drawPlayer(g2, state.getP2(), player2Img, new Color(245, 158, 11), "P2", startX, startY, cellSize, state.getCurrentTurn() == 2 && !state.isOver());
 
-        // 7.5 绘制鼠标悬停交互指引 (目标格高亮与朝向锁边预览箭头)
-        drawMouseHoverIndicator(g2, state, startX, startY, cellSize, rows, cols, reachableWithin3);
+        // 7.5 绘制鼠标悬停交互指引 (仅对局进行时生效，复盘模式静默)
+        if (!replayManager.isReplayMode()) {
+            drawMouseHoverIndicator(g2, state, startX, startY, cellSize, rows, cols, reachableWithin3);
+        }
 
         // 8. 绘制现代化高对比度侧边栏
-        drawSidebar(g2, state, boardAreaWidth, 0, sidebarWidth, totalHeight);
+        drawSidebar(g2, state, replaySnap, boardAreaWidth, 0, sidebarWidth, totalHeight);
 
         // 9. 联机等待对手加入时的沉浸式提示蒙层
         if (controller instanceof OnlineController oc && !oc.isGameStarted()) {
@@ -339,19 +374,19 @@ public class GameCanvas extends JPanel {
             g2.setStroke(new BasicStroke(1.6f));
             g2.draw(new RoundRectangle2D.Float(panelX, panelY, panelW, panelH, 16, 16));
 
-            g2.setFont(new Font("SansSerif", Font.BOLD, 20));
+            g2.setFont(FontHelper.getFont(Font.BOLD, 20));
             String waitTitle = "⏳ 正在等待对手加入房间 (1/2)...";
             int tw = g2.getFontMetrics().stringWidth(waitTitle);
             g2.drawString(waitTitle, panelX + (panelW - tw) / 2, panelY + 45);
 
             g2.setColor(new Color(226, 232, 240));
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 14));
             String rInfo = "房间编号: " + (oc.getRoomId() != null ? oc.getRoomId() : "---") + "   |   已就绪: 1/2";
             int rw = g2.getFontMetrics().stringWidth(rInfo);
             g2.drawString(rInfo, panelX + (panelW - rw) / 2, panelY + 85);
 
             g2.setColor(new Color(148, 163, 184));
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 12));
             String hint = "请将房间号告知对手，对手加入后将自动开局！";
             int hw = g2.getFontMetrics().stringWidth(hint);
             g2.drawString(hint, panelX + (panelW - hw) / 2, panelY + 120);
@@ -480,7 +515,115 @@ public class GameCanvas extends JPanel {
         g2.draw(arrow);
     }
 
-    private void drawSidebar(Graphics2D g2, GameState state, int x, int y, int width, int height) {
+    private void drawReplayMoveTrajectory(Graphics2D g2, TurnSnapshot snap, int startX, int startY, int cellSize) {
+        if (!snap.hasMoved()) return;
+
+        int fx = startX + snap.getFromC() * cellSize + cellSize / 2;
+        int fy = startY + snap.getFromR() * cellSize + cellSize / 2;
+        int tx = startX + snap.getToC() * cellSize + cellSize / 2;
+        int ty = startY + snap.getToR() * cellSize + cellSize / 2;
+
+        Color trajColor = (snap.getPlayerId() == 1) ? new Color(6, 182, 212) : new Color(245, 158, 11);
+
+        // 1. 带有辉光的虚线轨迹
+        g2.setColor(new Color(trajColor.getRed(), trajColor.getGreen(), trajColor.getBlue(), 60));
+        g2.setStroke(new BasicStroke(6.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(fx, fy, tx, ty);
+
+        g2.setColor(new Color(trajColor.getRed(), trajColor.getGreen(), trajColor.getBlue(), 230));
+        g2.setStroke(new BasicStroke(3.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{8, 6}, 0));
+        g2.drawLine(fx, fy, tx, ty);
+
+        // 2. 起点圆形标记 ("起")
+        int rSize = Math.max(18, (int) (cellSize * 0.45));
+        g2.setColor(new Color(15, 23, 42, 220));
+        g2.fillOval(fx - rSize / 2, fy - rSize / 2, rSize, rSize);
+        g2.setColor(trajColor);
+        g2.setStroke(new BasicStroke(2.0f));
+        g2.drawOval(fx - rSize / 2, fy - rSize / 2, rSize, rSize);
+
+        g2.setFont(FontHelper.getFont(Font.BOLD, Math.max(10, rSize / 2)));
+        g2.setColor(Color.WHITE);
+        FontMetrics fm = g2.getFontMetrics();
+        g2.drawString("起", fx - fm.stringWidth("起") / 2, fy + fm.getAscent() / 2 - 1);
+
+        // 3. 终点方向箭头
+        drawArrowHead(g2, fx, fy, tx, ty, trajColor, Math.max(10, cellSize / 5));
+    }
+
+    private void drawArrowHead(Graphics2D g2, double x1, double y1, double x2, double y2, Color color, int size) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double angle = Math.atan2(dy, dx);
+
+        Path2D.Double arrow = new Path2D.Double();
+        arrow.moveTo(x2, y2);
+        arrow.lineTo(x2 - size * Math.cos(angle - Math.PI / 6), y2 - size * Math.sin(angle - Math.PI / 6));
+        arrow.lineTo(x2 - size * Math.cos(angle + Math.PI / 6), y2 - size * Math.sin(angle + Math.PI / 6));
+        arrow.closePath();
+
+        g2.setColor(color);
+        g2.fill(arrow);
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.draw(arrow);
+    }
+
+    private void drawReplayLockedEdgeHighlight(Graphics2D g2, int startX, int startY, int cellSize,
+                                               int r, int c, Direction dir, float lockedWidth) {
+        if (dir == null || r < 0 || c < 0) return;
+
+        int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        switch (dir) {
+            case UP -> {
+                x1 = startX + c * cellSize; y1 = startY + r * cellSize;
+                x2 = startX + (c + 1) * cellSize; y2 = startY + r * cellSize;
+            }
+            case DOWN -> {
+                x1 = startX + c * cellSize; y1 = startY + (r + 1) * cellSize;
+                x2 = startX + (c + 1) * cellSize; y2 = startY + (r + 1) * cellSize;
+            }
+            case LEFT -> {
+                x1 = startX + c * cellSize; y1 = startY + r * cellSize;
+                x2 = startX + c * cellSize; y2 = startY + (r + 1) * cellSize;
+            }
+            case RIGHT -> {
+                x1 = startX + (c + 1) * cellSize; y1 = startY + r * cellSize;
+                x2 = startX + (c + 1) * cellSize; y2 = startY + (r + 1) * cellSize;
+            }
+        }
+
+        // 1. 金色霓虹冲击力场外辉光
+        g2.setColor(new Color(251, 191, 36, 180));
+        g2.setStroke(new BasicStroke(lockedWidth + 8.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(x1, y1, x2, y2);
+
+        // 2. 核心白金强光
+        g2.setColor(new Color(255, 251, 235));
+        g2.setStroke(new BasicStroke(lockedWidth + 2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(x1, y1, x2, y2);
+
+        // 3. 边中央显目的 "🔒 本手锁边" 徽章
+        int mx = (x1 + x2) / 2;
+        int my = (y1 + y2) / 2;
+        int bw = 64, bh = 20;
+        int bx = mx - bw / 2;
+        int by = my - bh / 2;
+
+        g2.setColor(new Color(217, 119, 6)); // 琥珀金底
+        g2.fill(new RoundRectangle2D.Float(bx, by, bw, bh, 8, 8));
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.draw(new RoundRectangle2D.Float(bx, by, bw, bh, 8, 8));
+
+        g2.setFont(FontHelper.getFont(Font.BOLD, 10));
+        g2.setColor(Color.WHITE);
+        FontMetrics fm = g2.getFontMetrics();
+        String tag = "🔒 本手锁边";
+        g2.drawString(tag, bx + (bw - fm.stringWidth(tag)) / 2, by + 14);
+    }
+
+    private void drawSidebar(Graphics2D g2, GameState state, TurnSnapshot replaySnap, int x, int y, int width, int height) {
         // 侧边栏背景
         g2.setColor(new Color(15, 23, 42)); // 深邃黑曜石
         g2.fillRect(x, y, width, height);
@@ -495,8 +638,12 @@ public class GameCanvas extends JPanel {
         // 面板 1：双雄对决一体化 HUD 卡片 (Versus Card)
         curY = drawVersusHud(g2, state, x + pad, curY, innerWidth);
 
-        // 面板 2：本回合战术行动 / 终局胜负卡片 (Tactical Action Card)
-        curY = drawTacticalCard(g2, state, x + pad, curY + 12, innerWidth);
+        // 面板 2：本回合战术行动 / 终局胜负卡片 / 复盘解析面板
+        if (replayManager.isReplayMode() && replaySnap != null) {
+            curY = drawReplayCard(g2, replaySnap, x + pad, curY + 12, innerWidth);
+        } else {
+            curY = drawTacticalCard(g2, state, x + pad, curY + 12, innerWidth);
+        }
 
         // 面板 3：极简战局图例与快捷操作指南 (Compact Legend & Keybinds)
         drawCompactGuide(g2, x + pad, curY + 12, innerWidth);
@@ -504,9 +651,71 @@ public class GameCanvas extends JPanel {
         // 底部状态通知
         if (!statusNotification.isEmpty()) {
             g2.setColor(new Color(56, 189, 248));
-            g2.setFont(new Font("SansSerif", Font.ITALIC, 12));
+            g2.setFont(FontHelper.getFont(Font.ITALIC, 12));
             g2.drawString("ℹ " + statusNotification, x + pad, height - 16);
         }
+    }
+
+    private int drawReplayCard(Graphics2D g2, TurnSnapshot snap, int x, int y, int w) {
+        int cardH = 142;
+        g2.setColor(new Color(24, 24, 52, 230));
+        g2.fill(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+        g2.setColor(new Color(139, 92, 246));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
+
+        // 标题行
+        g2.setColor(new Color(233, 213, 255));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 13));
+        String titleStr = (snap.getMoveIndex() == 0)
+                ? "📖 战局复盘 · 开局初始盘面"
+                : String.format("📖 战局复盘 · 第 %d / %d 手", snap.getMoveIndex(), replayManager.getTotalSteps());
+        g2.drawString(titleStr, x + 14, y + 24);
+
+        if (snap.getMoveIndex() == 0) {
+            g2.setColor(new Color(203, 213, 225));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 12));
+            g2.drawString("双方就位，等待第一步行动", x + 14, y + 48);
+            g2.drawString("P1 蓝方: (0,0)  |  P2 橙方: 边角", x + 14, y + 72);
+        } else {
+            // 行动方
+            Color moverCol = (snap.getPlayerId() == 1) ? new Color(6, 182, 212) : new Color(245, 158, 11);
+            g2.setColor(moverCol);
+            g2.setFont(FontHelper.getFont(Font.BOLD, 12));
+            String moverStr = String.format("▶ 行动方: %s (%s)",
+                    FontHelper.abbreviate(snap.getPlayerName(), 8),
+                    (snap.getPlayerId() == 1 ? "P1 先手" : "P2 后手"));
+            g2.drawString(moverStr, x + 14, y + 48);
+
+            // 移动与能耗
+            g2.setColor(new Color(241, 245, 249));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 12));
+            String moveStr = snap.hasMoved()
+                    ? String.format("轨迹: (%d,%d) ➔ (%d,%d) · 耗能 %d 步",
+                            snap.getFromR(), snap.getFromC(), snap.getToR(), snap.getToC(), snap.getStepsUsed())
+                    : "轨迹: 原地未移动";
+            g2.drawString(moveStr, x + 14, y + 72);
+
+            // 锁边
+            g2.setColor(new Color(251, 191, 36));
+            String lockStr = snap.hasLockedEdge()
+                    ? String.format("🔒 封锁: (%d,%d) 的 [%s %s] 边",
+                            snap.getLockedEdgeR(), snap.getLockedEdgeC(),
+                            snap.getLockedDirection().getSymbol(), snap.getLockedDirection().name())
+                    : "🔒 未新增封锁边";
+            g2.drawString(lockStr, x + 14, y + 96);
+        }
+
+        // 当前比分与指引
+        g2.setColor(new Color(148, 163, 184));
+        g2.setFont(FontHelper.getFont(Font.PLAIN, 11));
+        String scoreStr = String.format("此时领地: 蓝方 %d格 vs 橙方 %d格", snap.getP1Territory(), snap.getP2Territory());
+        g2.drawString(scoreStr, x + 14, y + 118);
+
+        g2.setColor(new Color(167, 139, 250));
+        g2.drawString("💡 按 ←/→ 逐手推演 · Home/End 首末", x + 14, y + 134);
+
+        return y + cardH;
     }
 
     private int drawVersusHud(Graphics2D g2, GameState state, int x, int y, int w) {
@@ -518,7 +727,7 @@ public class GameCanvas extends JPanel {
         g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 14, 14));
 
         // 头部标题条
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 12));
         g2.setColor(new Color(148, 163, 184));
         String modeText = controller.getModeName() + " (" + state.getRows() + "×" + state.getCols() + ")";
         g2.drawString(modeText, x + 14, y + 22);
@@ -547,7 +756,7 @@ public class GameCanvas extends JPanel {
         g2.setColor(new Color(21, 32, 54));
         g2.fillRoundRect(x + w / 2 - 20, vsY - 10, 40, 20, 6, 6);
         g2.setColor(new Color(71, 85, 105));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 10));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 10));
         g2.drawString("VS", x + w / 2 - 7, vsY + 4);
 
         // P2 玩家席位 (下部)
@@ -579,7 +788,7 @@ public class GameCanvas extends JPanel {
 
         // 2. 姓名与状态徽章
         int textX = rx + avSize + 12;
-        g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 14));
         g2.setColor(isTurn ? accent : new Color(241, 245, 249));
         g2.drawString(abbreviateName(player.getName(), 10), textX, ry + 18);
 
@@ -588,19 +797,19 @@ public class GameCanvas extends JPanel {
             g2.setColor(accent);
             g2.fill(new RoundRectangle2D.Float(rx + rw - 60, ry + 3, 58, 18, 6, 6));
             g2.setColor(new Color(15, 23, 42));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 10));
+            g2.setFont(FontHelper.getFont(Font.BOLD, 10));
             g2.drawString("行动中 ▶", rx + rw - 54, ry + 16);
         } else {
             g2.setColor(new Color(51, 65, 85));
             g2.fill(new RoundRectangle2D.Float(rx + rw - 48, ry + 3, 46, 18, 6, 6));
             g2.setColor(new Color(148, 163, 184));
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 10));
             g2.drawString("等待", rx + rw - 36, ry + 16);
         }
 
         // 3. 动态能量刻度槽 (Energy Meter)
         int meterY = ry + 28;
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 11));
         g2.setColor(accent);
         g2.drawString(String.format("⚡ %d/%d", player.getEnergy(), maxEnergy), textX, meterY + 11);
 
@@ -639,11 +848,11 @@ public class GameCanvas extends JPanel {
             String winnerName = (state.getWinner() == 3) ? "双方平局！"
                     : state.getPlayer(state.getWinner()).getName() + " 获得胜利！";
             g2.setColor(new Color(254, 202, 202));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 15));
+            g2.setFont(FontHelper.getFont(Font.BOLD, 15));
             g2.drawString("🏆 " + winnerName, x + 16, y + 28);
 
             g2.setColor(new Color(226, 232, 240));
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 12));
             String scoreStr = String.format("最终领地: %d格 vs %d格  |  连通边: %d vs %d",
                     state.getP1Territory(), state.getP2Territory(),
                     state.getP1UnblockedEdges(), state.getP2UnblockedEdges());
@@ -664,14 +873,14 @@ public class GameCanvas extends JPanel {
         g2.draw(new RoundRectangle2D.Float(x, y, w, cardH, 12, 12));
 
         // 第 1 行：行动者与步数
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 13));
         g2.setColor(new Color(241, 245, 249));
         int currentSteps = state.getCurrentTurnSteps();
         int remaining = state.getRemainingSteps();
         g2.drawString(String.format("▶ %s  已走 %d 步 · 剩余 %d 步", abbreviateName(currP.getName(), 8), currentSteps, remaining), x + 14, y + 26);
 
         // 第 2 行：战术操作指令 (键鼠双模支持)
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(FontHelper.getFont(Font.PLAIN, 12));
         if (remaining > 0) {
             g2.setColor(new Color(148, 163, 184));
             g2.drawString("💡 左键点击移动 · 右键定向锁边 | 或使用 WASD + L 键", x + 14, y + 50);
@@ -693,7 +902,7 @@ public class GameCanvas extends JPanel {
 
         // 标题
         g2.setColor(new Color(226, 232, 240));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.setFont(FontHelper.getFont(Font.BOLD, 12));
         g2.drawString("战局图例 & 键鼠操作", x + 14, y + 20);
 
         // 图例色块
@@ -715,11 +924,11 @@ public class GameCanvas extends JPanel {
 
     private void drawKeyTag(Graphics2D g2, int x, int y, String key, String desc) {
         g2.setColor(new Color(2, 132, 199));
-        g2.setFont(new Font("Consolas", Font.BOLD, 11));
+        g2.setFont(FontHelper.getMonospaceFont(Font.BOLD, 11));
         g2.drawString(key, x, y);
         g2.setColor(new Color(148, 163, 184));
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.drawString(desc, x + g2.getFontMetrics(new Font("Consolas", Font.BOLD, 11)).stringWidth(key) + 6, y);
+        g2.setFont(FontHelper.getFont(Font.PLAIN, 11));
+        g2.drawString(desc, x + g2.getFontMetrics(FontHelper.getMonospaceFont(Font.BOLD, 11)).stringWidth(key) + 6, y);
     }
 
     private void drawLegendBadge(Graphics2D g2, int x, int y, Color color, String label) {
@@ -727,15 +936,13 @@ public class GameCanvas extends JPanel {
         g2.setStroke(new BasicStroke(3.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g2.drawLine(x, y - 4, x + 16, y - 4);
 
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        g2.setFont(FontHelper.getFont(Font.PLAIN, 11));
         g2.setColor(new Color(203, 213, 225));
         g2.drawString(label, x + 22, y);
     }
 
     private String abbreviateName(String name, int maxLen) {
-        if (name == null) return "";
-        if (name.length() <= maxLen) return name;
-        return name.substring(0, maxLen - 1) + "…";
+        return FontHelper.abbreviate(FontHelper.sanitizeName(name, "我"), maxLen);
     }
 
     // ==========================================
@@ -799,6 +1006,10 @@ public class GameCanvas extends JPanel {
 
         if (r < 0 || r >= lastRows || c < 0 || c >= lastCols || mx < lastStartX || my < lastStartY) {
             return;
+        }
+
+        if (replayManager != null && replayManager.isReplayMode()) {
+            return; // 复盘推演模式下禁止落子移动
         }
 
         GameState state = controller.getGameState();

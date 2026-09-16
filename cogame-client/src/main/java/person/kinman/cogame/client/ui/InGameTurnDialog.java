@@ -16,11 +16,17 @@ import java.awt.geom.RoundRectangle2D;
 public class InGameTurnDialog extends JDialog {
     private final GameController controller;
     private final boolean isGameOver;
+    private final Runnable onReviewReplay;
 
     public InGameTurnDialog(Frame parent, GameController controller, boolean isGameOver) {
+        this(parent, controller, isGameOver, null);
+    }
+
+    public InGameTurnDialog(Frame parent, GameController controller, boolean isGameOver, Runnable onReviewReplay) {
         super(parent, isGameOver ? "COGame - 终局结算与新局分先" : "COGame - 局内分先与开启新局", true);
         this.controller = controller;
         this.isGameOver = isGameOver;
+        this.onReviewReplay = onReviewReplay;
 
         this.setSize(520, 430);
         this.setLocationRelativeTo(parent);
@@ -44,7 +50,7 @@ public class InGameTurnDialog extends JDialog {
 
         String titleText = isGameOver ? "🏆 战局已定！新一局分先执子" : "⚔️ 局内分先 · 开启新一局";
         JLabel titleLabel = new JLabel(titleText);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        titleLabel.setFont(FontHelper.getFont(Font.BOLD, 18));
         titleLabel.setForeground(isGameOver ? new Color(251, 191, 36) : new Color(56, 189, 248));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -53,7 +59,7 @@ public class InGameTurnDialog extends JDialog {
                 + "请选择下一局谁先走第一步 (联机双方同选先手将由系统公平掷骰裁定)："
                 + "</center></html>";
         JLabel descLabel = new JLabel(descText);
-        descLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        descLabel.setFont(FontHelper.getFont(Font.PLAIN, 12));
         descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         headerPanel.add(titleLabel);
@@ -108,11 +114,16 @@ public class InGameTurnDialog extends JDialog {
         bottomBar.setOpaque(false);
 
         DarkThemeHelper.DarkButton btnCancel = new DarkThemeHelper.DarkButton(
-                isGameOver ? "查看终局盘面" : "取消",
+                isGameOver ? "📖 查看终局与复盘" : "取消",
                 new Color(30, 41, 59), new Color(51, 65, 85), DarkThemeHelper.COLOR_BORDER
         );
-        btnCancel.setPreferredSize(new Dimension(120, 32));
-        btnCancel.addActionListener(e -> dispose());
+        btnCancel.setPreferredSize(new Dimension(150, 32));
+        btnCancel.addActionListener(e -> {
+            dispose();
+            if (isGameOver && onReviewReplay != null) {
+                onReviewReplay.run();
+            }
+        });
         bottomBar.add(btnCancel);
 
         root.add(bottomBar, BorderLayout.SOUTH);
@@ -192,17 +203,17 @@ public class InGameTurnDialog extends JDialog {
             g2.fill(new RoundRectangle2D.Float(0, 0, 4, h, 4, 4));
 
             // 标题
-            g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g2.setFont(FontHelper.getFont(Font.BOLD, 14));
             g2.setColor(hovered ? Color.WHITE : new Color(241, 245, 249));
             g2.drawString(title, 16, 23);
 
             // 副标题说明
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setFont(FontHelper.getFont(Font.PLAIN, 11));
             g2.setColor(hovered ? new Color(203, 213, 225) : new Color(148, 163, 184));
             g2.drawString(desc, 16, 43);
 
             // 右侧箭头
-            g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g2.setFont(FontHelper.getFont(Font.BOLD, 14));
             g2.setColor(hovered ? accent : new Color(71, 85, 105));
             g2.drawString("➔", w - 24, 33);
 

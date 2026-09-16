@@ -61,6 +61,15 @@ public enum Direction {
         };
     }
 
+    public String getSymbol() {
+        return switch (this) {
+            case UP -> "↑";
+            case RIGHT -> "→";
+            case DOWN -> "↓";
+            case LEFT -> "←";
+        };
+    }
+
     public static Direction fromIndex(int index) {
         for (Direction d : values()) {
             if (d.index == index) return d;

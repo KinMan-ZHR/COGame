@@ -48,7 +48,7 @@ public class DarkThemeHelper {
             setFocusPainted(false);
             setBorderPainted(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
-            setFont(new Font("SansSerif", Font.BOLD, 13));
+            setFont(FontHelper.getFont(Font.BOLD, 13));
         }
 
         @Override
@@ -92,7 +92,7 @@ public class DarkThemeHelper {
         field.setBackground(COLOR_BG_INPUT);
         field.setForeground(COLOR_TEXT_PRIMARY);
         field.setCaretColor(COLOR_BORDER_FOCUS);
-        field.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        field.setFont(FontHelper.getFont(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(COLOR_BORDER, 1, true),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
@@ -103,7 +103,7 @@ public class DarkThemeHelper {
         field.setBackground(COLOR_BG_INPUT);
         field.setForeground(COLOR_TEXT_PRIMARY);
         field.setCaretColor(COLOR_BORDER_FOCUS);
-        field.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        field.setFont(FontHelper.getFont(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(COLOR_BORDER, 1, true),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
@@ -111,7 +111,7 @@ public class DarkThemeHelper {
     }
 
     public static void styleDarkComboBox(JComboBox<?> combo) {
-        combo.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        combo.setFont(FontHelper.getFont(Font.PLAIN, 12));
         combo.setBackground(COLOR_BG_INPUT);
         combo.setForeground(COLOR_TEXT_PRIMARY);
         combo.setFocusable(false);
@@ -157,7 +157,7 @@ public class DarkThemeHelper {
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 l.setOpaque(true);
-                l.setFont(new Font("SansSerif", Font.PLAIN, 12));
+                l.setFont(FontHelper.getFont(Font.PLAIN, 12));
                 if (isSelected) {
                     l.setBackground(new Color(2, 132, 199));
                     l.setForeground(Color.WHITE);
@@ -173,7 +173,7 @@ public class DarkThemeHelper {
 
     public static void styleDarkTable(JTable table) {
         table.setRowHeight(38);
-        table.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        table.setFont(FontHelper.getFont(Font.PLAIN, 13));
         table.setBackground(COLOR_BG_INPUT);
         table.setForeground(COLOR_TEXT_PRIMARY);
         table.setSelectionBackground(new Color(2, 132, 199));
@@ -191,7 +191,7 @@ public class DarkThemeHelper {
                 l.setOpaque(true);
                 l.setBackground(COLOR_BG_ROW_ALT);
                 l.setForeground(COLOR_BORDER_FOCUS);
-                l.setFont(new Font("SansSerif", Font.BOLD, 13));
+                l.setFont(FontHelper.getFont(Font.BOLD, 13));
                 l.setHorizontalAlignment(SwingConstants.CENTER);
                 l.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 2, 1, COLOR_BORDER),

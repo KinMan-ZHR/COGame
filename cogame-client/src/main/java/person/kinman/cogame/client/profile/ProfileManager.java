@@ -3,12 +3,18 @@ package person.kinman.cogame.client.profile;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import person.kinman.cogame.client.ui.FontHelper;
 
 /**
- * 本地玩家档案与配置管理器：记住玩家昵称与登录状态
+ * 本地玩家档案与配置管理器：记住玩家昵称与登录状态 (全链路强制 UTF-8 编码与防乱码自愈)
  */
 public class ProfileManager {
     private static final String PROFILE_DIR = System.getProperty("user.home") + File.separator + ".cogame";
@@ -30,9 +36,24 @@ public class ProfileManager {
 
         File file = new File(PROFILE_FILE);
         if (file.exists()) {
-            try (FileReader reader = new FileReader(file)) {
+            // 优先尝试使用标准 UTF-8 读取
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
                 cachedProfile = gson.fromJson(reader, Profile.class);
                 if (cachedProfile != null) {
+                    cachedProfile.nickname = FontHelper.sanitizeName(cachedProfile.nickname, "我");
+                    return cachedProfile;
+                }
+            } catch (Exception ignored) {}
+
+            // 若 UTF-8 解析异常或文件此前由 GBK 系统默认字符集写入，尝试用 GBK/默认编码降级挽救
+            try (BufferedReader gbkReader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(file), "GBK"))) {
+                cachedProfile = gson.fromJson(gbkReader, Profile.class);
+                if (cachedProfile != null) {
+                    cachedProfile.nickname = FontHelper.sanitizeName(cachedProfile.nickname, "我");
+                    // 重新以标准 UTF-8 覆盖保存，永久自愈本地文件
+                    saveProfile(cachedProfile.nickname, cachedProfile.lastServerUrl);
                     return cachedProfile;
                 }
             } catch (Exception ignored) {}
@@ -45,7 +66,7 @@ public class ProfileManager {
     public static synchronized void saveProfile(String nickname, String serverUrl) {
         Profile profile = loadProfile();
         if (nickname != null && !nickname.trim().isEmpty()) {
-            profile.nickname = nickname.trim();
+            profile.nickname = FontHelper.sanitizeName(nickname, "我");
             profile.hasLoggedInOnline = true;
         }
         if (serverUrl != null && !serverUrl.trim().isEmpty()) {
@@ -57,7 +78,9 @@ public class ProfileManager {
             dir.mkdirs();
         }
 
-        try (FileWriter writer = new FileWriter(PROFILE_FILE)) {
+        // 显式指定 UTF-8 写入
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(PROFILE_FILE), StandardCharsets.UTF_8))) {
             gson.toJson(profile, writer);
         } catch (Exception ignored) {}
     }
@@ -68,7 +91,7 @@ public class ProfileManager {
     public static String getDisplayName() {
         Profile profile = loadProfile();
         if (profile.hasLoggedInOnline && profile.nickname != null && !profile.nickname.trim().isEmpty()) {
-            return profile.nickname.trim();
+            return FontHelper.sanitizeName(profile.nickname, "我");
         }
         return "我";
     }
