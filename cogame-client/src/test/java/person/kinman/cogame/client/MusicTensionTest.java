@@ -99,6 +99,51 @@ public class MusicTensionTest {
         // 游戏终局
         state.setOver(true);
         canvas.updateMusicForTesting(state);
-        Assertions.assertFalse(canvas.isInTenseMode(), "终局后重置紧张态，进入终局和弦");
+        Assertions.assertFalse(canvas.isInTenseMode(), "终局后重置紧张态");
+        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "终局后无论是否复盘，持续循环播放悠闲舒缓的放松音乐，直到离开或开启新一局");
+    }
+
+    @Test
+    public void testGameOverMusicContinuousRelaxation() {
+        person.kinman.cogame.client.controller.LocalController controller = new person.kinman.cogame.client.controller.LocalController(6);
+        GameCanvas canvas = new GameCanvas(controller);
+        GameState state = controller.getGameState();
+
+        // 终局前处于紧张模式
+        state.getBoard().lockEdge(0, 0, Direction.RIGHT, 2);
+        canvas.updateMusicForTesting(state);
+        Assertions.assertTrue(canvas.isInTenseMode());
+        Assertions.assertEquals("theme_tense.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName());
+
+        // 对局结束（不点复盘状态）：立即切换到放松音乐，并保持循环
+        state.setOver(true);
+        canvas.updateMusicForTesting(state);
+        Assertions.assertFalse(canvas.isInTenseMode());
+        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "终局后必须一直播放放松音乐");
+
+        // 激活复盘模式：继续保持放松音乐
+        canvas.getReplayManager().setReplayMode(true);
+        canvas.updateMusicForTesting(state);
+        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "复盘推演期间持续放松");
+
+        // 退出复盘模式回到终局盘面：继续保持放松音乐
+        canvas.getReplayManager().setReplayMode(false);
+        canvas.updateMusicForTesting(state);
+        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "退出复盘依然一直放松");
+
+        // 开启新一局：重置棋盘并继续以放松平和音乐开启
+        controller.resetGame();
+        canvas.updateMusicForTesting(controller.getGameState());
+        Assertions.assertEquals("theme_peace.wav", person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "新一局平稳进入平和模式");
+
+        // 退出对局（离开）
+        person.kinman.cogame.client.audio.AudioPlayer.stopMusic();
+        Assertions.assertNull(person.kinman.cogame.client.audio.AudioPlayer.getCurrentMusicName(),
+                "离开对局后音乐终止");
     }
 }

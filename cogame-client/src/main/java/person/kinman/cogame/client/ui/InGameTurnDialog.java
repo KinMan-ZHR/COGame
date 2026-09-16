@@ -32,6 +32,15 @@ public class InGameTurnDialog extends JDialog {
         this.setLocationRelativeTo(parent);
         this.setResizable(false);
 
+        this.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                if (isGameOver && onReviewReplay != null) {
+                    onReviewReplay.run();
+                }
+            }
+        });
+
         initUI();
     }
 
