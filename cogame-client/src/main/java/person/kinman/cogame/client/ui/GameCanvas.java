@@ -120,8 +120,8 @@ public class GameCanvas extends JPanel {
     }
 
     /**
-     * 智能评估棋盘对局紧张态（全规格自适应：6x6~13x13）
-     * 设定开局保护期与动态图论张力评估，避免小棋盘前几回合过早变奏，确保开局思考充分沉浸
+     * 智能评估棋盘对局紧张态
+     * 仅在第一个场景（绝境出度危机：任一方有效出度 <= 1，陷入死胡同绝境）下触发变奏，其余场景均取消
      */
     public static boolean isTenseSituation(GameState state) {
         Board board = state.getBoard();
@@ -132,92 +132,15 @@ public class GameCanvas extends JPanel {
         if (p1 == null || p2 == null) return false;
 
         int playerWalls = countPlayerLockedEdges(board);
-        int rows = board.getRows();
-        int cols = board.getCols();
-        int totalEdges = rows * (cols - 1) + (rows - 1) * cols;
-
-        // 计算各尺寸棋盘开局保护阈值（避免开局数步内仓促变奏破坏起手沉思感）
-        // 6x6: 至少8条玩家锁边 (约4轮博弈后); 9x9: 14条; 12x12: 20条
-        int minPlayerWalls = Math.max(8, (rows + cols) - 4);
-
-        int p1Degree = board.getOpenDirections(p1.getR(), p1.getC()).size();
-        int p2Degree = board.getOpenDirections(p2.getR(), p2.getC()).size();
-
-        // 连通最短物理距离
-        List<int[]> path = GameEvaluator.findPath(board, p1.getR(), p1.getC(), p2.getR(), p2.getC());
-        if (path.isEmpty()) {
-            return true; // 已无通路（处于终局边缘）
-        }
-        int pathDistance = path.size() - 1;
-
-        // 1. 致命伏击危机：任一方仅剩 <= 1 出口，且对手已近身 <= 3 步具备直接关门斩杀能力（需至少4条玩家墙体）
-        if ((p1Degree <= 1 || p2Degree <= 1) && pathDistance <= 3 && playerWalls >= 4) {
-            return true;
-        }
-
-        // 开局布局保护期：未累积足够的博弈墙体时，严格保持静心推演平和曲
-        if (playerWalls < minPlayerWalls) {
+        // 开局没有任何玩家落子前，处于深思起手阶段，保持平和
+        if (playerWalls == 0) {
             return false;
         }
 
-        // --- 进入中后盘（playerWalls >= minPlayerWalls）后的危机深度判定 ---
-
-        // 2. 近身缠斗肉搏：双方物理距离 <= 2 步（已直接进入面对面刺杀与封堵射程）
-        if (pathDistance <= 2) {
-            return true;
-        }
-
-        // 3. 走廊截杀对峙：双方距离 <= 3 步且至少一方处于窄道 (出度 <= 2)
-        if (pathDistance <= 3 && (p1Degree <= 2 || p2Degree <= 2)) {
-            return true;
-        }
-
-        // 4. 决胜割边威胁：双方距离进入威胁范围 (<= 4 步)，且最短路径上存在一锁即绝杀的致命割边
-        if (pathDistance <= 4 && hasCriticalBridgeAlongPath(board, path, p1.getR(), p1.getC(), p2.getR(), p2.getC())) {
-            return true;
-        }
-
-        // 5. 残局高饱和度：玩家主动封锁边数达全盘 18% 以上，且双方进入收敛半区
-        double playerWallRatio = (double) playerWalls / Math.max(1, totalEdges);
-        int boardHalfPerimeter = (rows + cols) / 2;
-        if (playerWallRatio >= 0.18 && pathDistance <= boardHalfPerimeter) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * 探测最短路径上是否存在一击定胜负的关键割边（Bridge）
-     */
-    public static boolean hasCriticalBridgeAlongPath(Board board, List<int[]> path, int p1R, int p1C, int p2R, int p2C) {
-        if (path == null || path.size() < 2) return false;
-
-        // 使用棋盘深拷贝进行沙盒模拟，避免干扰实际游戏状态与渲染
-        Board simBoard = board.copy();
-        for (int i = 0; i < path.size() - 1; i++) {
-            int[] from = path.get(i);
-            int[] to = path.get(i + 1);
-            Direction dir = getDirectionBetween(from[0], from[1], to[0], to[1]);
-            if (dir == null) continue;
-
-            if (simBoard.lockEdge(from[0], from[1], dir, 1)) {
-                boolean cutOff = !GameEvaluator.hasPath(simBoard, p1R, p1C, p2R, p2C);
-                simBoard.unlockEdge(from[0], from[1], dir);
-                if (cutOff) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public static Direction getDirectionBetween(int r1, int c1, int r2, int c2) {
-        if (r2 == r1 - 1 && c2 == c1) return Direction.UP;
-        if (r2 == r1 + 1 && c2 == c1) return Direction.DOWN;
-        if (r2 == r1 && c2 == c1 - 1) return Direction.LEFT;
-        if (r2 == r1 && c2 == c1 + 1) return Direction.RIGHT;
-        return null;
+        // 仅在第一个场景下触发变奏：绝境出度危机（任一方有效出度 <= 1，陷入死胡同绝境）
+        int p1Degree = board.getOpenDirections(p1.getR(), p1.getC()).size();
+        int p2Degree = board.getOpenDirections(p2.getR(), p2.getC()).size();
+        return p1Degree <= 1 || p2Degree <= 1;
     }
 
     /**

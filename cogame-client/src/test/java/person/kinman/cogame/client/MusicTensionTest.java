@@ -31,89 +31,48 @@ public class MusicTensionTest {
     }
 
     @Test
-    public void testSmallBoardOpeningPacingNotPremature() {
-        // 验证小棋盘前几回合开局保护期：即使双方在开局阶段身位接近，也不过早切歌
+    public void testSuffocationCrisisTriggersTension() {
         GameState state = new GameState(6, 6);
         Board board = state.getBoard();
 
-        // 模拟开局第 2 回合：双方走到中央探路，物理距离仅相距 2 步
+        // P1 在 (0,0)，初始出度为 2（RIGHT, DOWN）
+        // 玩家 2 封锁 P1 右侧边，让 P1 只剩 1 个出口 (DOWN)
+        board.lockEdge(0, 0, Direction.RIGHT, 2);
+
+        Assertions.assertEquals(1, board.getOpenDirections(0, 0).size());
+        Assertions.assertTrue(GameCanvas.isTenseSituation(state),
+                "唯一保留触发场景：任一方出度 <= 1 陷入死胡同时，必须触发紧迫变奏");
+    }
+
+    @Test
+    public void testOtherScenariosCancelledFromTriggeringTense() {
+        GameState state = new GameState(6, 6);
+        Board board = state.getBoard();
+
+        // 1. 测试近距离接触场景（已取消紧迫触发）
+        // 双方贴脸相距仅 1 步 (P1在2,2, P2在2,3)，且已有玩家锁边，但双方出度 >= 2
         state.getP1().setR(2);
         state.getP1().setC(2);
         state.getP2().setR(2);
-        state.getP2().setC(4);
+        state.getP2().setC(3);
+        board.lockEdge(0, 0, Direction.RIGHT, 1); // 放置一条普通玩家锁边
 
-        // 双方各自只放置了 1 道起始墙 (总玩家墙体 = 2 < 8)
-        board.lockEdge(0, 0, Direction.RIGHT, 1);
-        board.lockEdge(5, 5, Direction.LEFT, 2);
-
-        Assertions.assertEquals(2, GameCanvas.countPlayerLockedEdges(board));
+        Assertions.assertTrue(board.getOpenDirections(2, 2).size() >= 2);
+        Assertions.assertTrue(board.getOpenDirections(2, 3).size() >= 2);
         Assertions.assertFalse(GameCanvas.isTenseSituation(state),
-                "小棋盘开局仅 2 条锁边且棋盘空旷，即使身位接近也必须处于平和期，留足沉思听感");
-    }
+                "近身接触场景已被取消，只要出度 >= 2 就不得切入紧迫状态");
 
-    @Test
-    public void testSuffocationAmbushTrigger() {
-        GameState state = new GameState(6, 6);
-        Board board = state.getBoard();
-
-        // P1 在 (0,0)，被困在死胡同（出度 = 1）
-        board.lockEdge(0, 0, Direction.RIGHT, 2);
-        board.lockEdge(1, 1, Direction.RIGHT, 1);
-        board.lockEdge(2, 2, Direction.RIGHT, 1);
-        board.lockEdge(3, 3, Direction.RIGHT, 1); // 累积 4 条墙
-
-        // 若对手在千里之外 (5,5)，无直接威胁，不开紧迫曲
-        state.getP2().setR(5);
-        state.getP2().setC(5);
-        Assertions.assertFalse(GameCanvas.isTenseSituation(state), "对手在棋盘远端无法关门斩杀，不应虚报紧张态");
-
-        // 当对手已近身至 (1,0) (距离 1 步，随时可关门截杀)
-        state.getP2().setR(1);
-        state.getP2().setC(0);
-        Assertions.assertTrue(GameCanvas.isTenseSituation(state), "绝境死胡同且对手逼近 <= 3 步具备斩杀能力时，必须切入紧迫变奏");
-    }
-
-    @Test
-    public void testMidEndgameHandToHandCombat() {
-        GameState state = new GameState(6, 6);
-        Board board = state.getBoard();
-
-        // 进入中盘（已放置 8 条以上玩家墙体）
+        // 2. 测试高锁边数/残局饱和度场景（已取消紧迫触发）
+        // 棋盘上放置大量墙体（如 16 条），但双方依然自由（出度 >= 2）
         for (int i = 0; i < 4; i++) {
             board.lockEdge(i, 0, Direction.RIGHT, 1);
             board.lockEdge(5 - i, 5, Direction.LEFT, 2);
+            board.lockEdge(0, i, Direction.DOWN, 1);
+            board.lockEdge(5, 5 - i, Direction.UP, 2);
         }
-        Assertions.assertTrue(GameCanvas.countPlayerLockedEdges(board) >= 8);
-
-        // 双方在窄道狭路相逢（相距 2 步，出度受限 <= 2）
-        state.getP1().setR(2);
-        state.getP1().setC(2);
-        state.getP2().setR(2);
-        state.getP2().setC(4);
-        board.lockEdge(2, 2, Direction.UP, 1); // 限制出度
-
-        Assertions.assertTrue(GameCanvas.isTenseSituation(state), "中盘白热化阶段，狭路相逢且出度受限必须触发紧张变奏");
-    }
-
-    @Test
-    public void testCriticalBridgeDetectionInMidEndgame() {
-        GameState state = new GameState(6, 6);
-        Board board = state.getBoard();
-
-        // 铺设 8 条玩家墙体，模拟中后盘格局
-        for (int c = 0; c < 6; c++) {
-            board.lockEdge(0, c, Direction.DOWN, 1);
-            board.lockEdge(1, c, Direction.DOWN, 2);
-        }
-        Assertions.assertTrue(GameCanvas.countPlayerLockedEdges(board) >= 8);
-
-        // 双方在 (1,1) 与 (1,4) 相距 3 步对峙，中间存在一锁即绝杀的关键割边
-        state.getP1().setR(1);
-        state.getP1().setC(1);
-        state.getP2().setR(1);
-        state.getP2().setC(4);
-
-        Assertions.assertTrue(GameCanvas.isTenseSituation(state), "中后盘威胁距离内存在一击必杀的割边（Bridge）时应触发紧张态");
+        Assertions.assertTrue(GameCanvas.countPlayerLockedEdges(board) >= 12);
+        Assertions.assertFalse(GameCanvas.isTenseSituation(state),
+                "残局高饱和度与割边场景已被取消，只要未陷入出度 <= 1 死胡同，持续保持平和曲");
     }
 
     @Test
@@ -125,20 +84,15 @@ public class MusicTensionTest {
         // 初始开局：非紧张态
         Assertions.assertFalse(canvas.isInTenseMode(), "初始开局应处于平和模式");
 
-        // 制造致命伏击危机（P1 出度 <= 1，P2 近身 1 步，墙体 >= 4）
+        // 制造绝境出度危机（P1 出度 <= 1）
         state.getBoard().lockEdge(0, 0, Direction.RIGHT, 2);
-        state.getBoard().lockEdge(1, 1, Direction.RIGHT, 1);
-        state.getBoard().lockEdge(2, 2, Direction.RIGHT, 1);
-        state.getBoard().lockEdge(3, 3, Direction.RIGHT, 1);
-        state.getP2().setR(1);
-        state.getP2().setC(0);
-
         canvas.updateMusicForTesting(state);
-        Assertions.assertTrue(canvas.isInTenseMode(), "致命伏击危机发生后应进入紧张变奏模式");
+        Assertions.assertTrue(canvas.isInTenseMode(), "出度 <= 1 危机发生后应进入紧张变奏模式");
 
-        // 解除直接危机但未重新开局：应当单向锁定紧张变奏，防止反复横跳
-        state.getP2().setR(4);
-        state.getP2().setC(4);
+        // 解除直接危机（出度恢复）但未重新开局：应当单向锁定紧张变奏，防止反复横跳
+        state.getBoard().unlockEdge(0, 0, Direction.RIGHT);
+        // 放置一条普通玩家锁边保证 playerWalls > 0
+        state.getBoard().lockEdge(3, 3, Direction.RIGHT, 1);
         canvas.updateMusicForTesting(state);
         Assertions.assertTrue(canvas.isInTenseMode(), "单向升级机制应保持紧张变奏，避免反复横跳破坏听感");
 
